@@ -1,2 +1,8 @@
 # Google App Engine generated folder
 appengine-generated/
+
+# Background files for jetbrains
+.idea
+
+# Background files for notebooks
+.DS_Store
