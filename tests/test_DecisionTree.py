@@ -55,7 +55,7 @@ class TestDecisionTreeFit(unittest.TestCase):
         # Get the result object
         result_tree_1 = dt_1.get_tree()
 
-        self.assertEquals(len(result_tree_1), 4)
+        self.assertEquals(len(result_tree_1), 5)
 
 
 if __name__ == "__main__":
