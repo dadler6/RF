@@ -23,7 +23,7 @@ class DecisionTree(object):
     Parameters:
         self.__leaf_terminate: The leaf terminating criteria (how many points to left in the data to create
                              a leaf node). Defaults to 1.
-        self.__node_dict
+        self.__node_list
 
 
     Methods:
@@ -46,7 +46,8 @@ class DecisionTree(object):
         :param leaf_terminate: the amount of collections needed to terminate the tree with a leaf (defaults to 1)
         """
         self.__leaf_terminate = leaf_terminate
-        self.__node_dict = {}
+        self.__node_list = []
+        self.__ncols = 0
 
     def fit(self, x_data, y_data):
         """
@@ -55,27 +56,38 @@ class DecisionTree(object):
         :param x_data: The dataset to train the decision tree with.
         :param y_data: The result vector we are regressing on.
         """
-        # Level parameter
-        level = 0
         # Get number of columns
-        ncols = x_data.shape[1]
+        self.__ncols = x_data.shape[1]
 
         # Make initial node with all data
-        self.__node_dict[0] = [self.__create_node__(x_data, y_data)]
+        self.__node_list.append([self.__create_node__(x_data, y_data)])
+        
+        # Recursive fit
+        self.__recursive_fit([0, 0])
+        
+    def __recursive_fit(self, curr_idx):
+        """
+        Recursively fit nodes while not satisfying the terminating criteria.
 
-        # While not terminate fit
-        while not self.__terminate_fit__(level):
-            # Determine RSS for each index
+        :param curr_idx: The current 2-d index the function is calling to
+        """
+        if not self.__terminate_fit__(curr_idx):
+            for i in self.__node_list[curr_idx[0]]:
+                print(i.get_x_data())
+            # Go through each column
             col_rss = []
-            for idx in range(ncols):
-                col_rss.append(self.__sum_rss__(level, idx))
-            # Get the minimum RSS value
-            min_idx = np.argmin(col_rss)
-            # Split and create new nodes
-            self.__add_split_value__(min_idx, level)
-            # Create new node levels
-            self.__create_new_nodes__(level)
-            level += 1
+            for i in range(self.__ncols):
+                col_rss.append(self.__rss__(curr_idx[0], curr_idx[1], i))
+            split_col = np.argmin(col_rss)
+            # Set the split
+            self.__node_list[curr_idx[0]][curr_idx[1]].set_split(split_col)
+            # Create new nodes
+            lower_idx, upper_idx = self.__create_new_nodes__(curr_idx[0], curr_idx[1])
+            # Call the function if necessary
+            if lower_idx[1] is not None:
+                self.__recursive_fit(lower_idx)
+            if upper_idx[1] is not None:
+                self.__recursive_fit(upper_idx)
 
     def __create_node__(self, x_data, y_data):
         """
@@ -90,42 +102,64 @@ class DecisionTree(object):
         else:
             return self._Node(True, x_data, y_data)
 
-    def __add_split_value__(self, idx, level):
-        """
-        Split nodes along an index value.
-
-        :param idx: The index to split on
-        :param level: The level in the dictionary currently being set
-        """
-        self.__node_dict[level] = [n.set_split(idx) for n in self.__node_dict[level] if not n.is_leaf()]
-
-    def __create_new_nodes__(self, level):
+    def __create_new_nodes__(self, level, n):
         """
         Create the next level of nodes. Splits the data based upon the specified axis, and
         creates the new level of nodes by splitting the data.
 
         :param level: The level value to create the new nodes on
+        :param n: The index in the level we are on
+
+        :return: the upper and lower tuples for the new nodes created
         """
-        self.__node_dict[level + 1] = []
-        curr_index = 0
-        for i in range(len(self.__node_dict[level])):
-            split_val = self.__node_dict[level][i].get_split()
-            data = self.__node_dict[level][i].get_x_data()
-            y_data = self.__node_dict[level][i].get_y_data()
-            idx = self.__node_dict[level][i].get_col()
-            # Split data
-            lower_x_data = data[data[idx] < split_val]
-            lower_y_data = y_data[data[idx] < split_val]
-            upper_x_data = data[data[idx] >= split_val]
-            upper_y_data = y_data[data[idx] >= split_val]
-            # Make lower node
-            self.__node_dict[level + 1].append(self.__create_node__(lower_x_data, lower_y_data))
-            self.__node_dict[level][i].set_lower_split_index(curr_index)
-            curr_index += 1
-            # Make upper node
-            self.__node_dict[level + 1].append(self.__create_node__(upper_x_data, upper_y_data))
-            self.__node_dict[level][i].set_lower_split_index(curr_index)
-            curr_index += 1
+        if (level + 1) == len(self.__node_list):
+            self.__node_list.append([])
+
+        split_val = self.__node_list[level][n].get_split()
+        x_data = self.__node_list[level][n].get_x_data()
+        y_data = self.__node_list[level][n].get_y_data()
+        idx = self.__node_list[level][n].get_col()
+
+        # Split data
+        lower_x_data = x_data[x_data[:, idx] < split_val]
+        lower_y_data = y_data[x_data[:, idx] < split_val]
+        upper_x_data = x_data[x_data[:, idx] >= split_val]
+        upper_y_data = y_data[x_data[:, idx] >= split_val]
+
+        # Check if the upper data (with the equals sign) has all the same rows
+        # If this is the case, randomly split the data
+        if (upper_x_data.shape[0] > 1) and ((upper_x_data[:, idx] - upper_x_data[0, idx]) == 0).all():
+            # Split the data in the middle
+            split_point = int(np.floor(upper_x_data.shape[0] / 2.0))
+            lower_x_data = upper_x_data[0:split_point, :]
+            lower_y_data = upper_y_data[0:split_point]
+            upper_x_data = upper_x_data[split_point:, :]
+            upper_y_data = upper_y_data[split_point:]
+
+        # Now check if all the same in lower/upper
+        if (lower_x_data.shape[0] > 1) and ((lower_x_data - lower_x_data[0, :]) == 0).all():
+            lower_x_data = lower_x_data[[0], :]
+            lower_y_data = lower_y_data[0]
+        if (upper_x_data.shape[0] > 1) and ((upper_x_data - upper_x_data[0, :]) == 0).all():
+            upper_x_data = upper_x_data[[0], :]
+            upper_y_data = upper_y_data[0]
+
+        # Make lower node if one can
+        if lower_x_data.shape[0] > 0:
+            lower_curr_index = len(self.__node_list[level + 1])
+            self.__node_list[level + 1].append(self.__create_node__(lower_x_data, lower_y_data))
+            self.__node_list[level][n].set_lower_split_index(lower_curr_index)
+        else:
+            lower_curr_index = None
+        # Make upper node
+        if upper_x_data.shape[0] > 0:
+            upper_curr_index = len(self.__node_list[level + 1])
+            self.__node_list[level + 1].append(self.__create_node__(upper_x_data, upper_y_data))
+            self.__node_list[level][n].set_lower_split_index(upper_curr_index)
+        else:
+            upper_curr_index = None
+
+        return [level + 1, lower_curr_index], [level + 1, upper_curr_index]
 
     def __rss__(self, level, n, idx):
         """
@@ -137,31 +171,19 @@ class DecisionTree(object):
 
         :return: The RSS
         """
-        curr = self.__node_dict[level][n].get_x_data()[idx]
+        curr = self.__node_list[level][n].get_x_data()[:, idx]
         return np.sum((curr - np.mean(curr))**2)
 
-    def __sum_rss__(self, level, idx):
-        """
-        Calculate the average of each node list value for the given param index idx
-
-        :param level: The level to calculate the summed rss
-        :param idx: The index of the column the data frame the summed rss is for
-
-        :return: The summed RSS
-        """
-        return np.sum([self.__rss__(level, n, idx) for n in range(len(self.__node_dict[level]))])
-
-    def __terminate_fit__(self, level):
+    def __terminate_fit__(self, curr_idx):
         """
         Decide if fit is terminated.
 
-        :param: The current level
+        :param: The current 2D idx
         :return: True if terminated, False if not
         """
-        for i in self.__node_dict[level]:
-            if not i.get_leaf():
-                return False
-        return True
+        if self.__node_list[curr_idx[0]][curr_idx[1]].is_leaf():
+            return True
+        return False
 
     def predict(self, x_data):
         """
@@ -171,6 +193,14 @@ class DecisionTree(object):
         :return: A vector of predictions for each row in X.
         """
         pass
+
+    def get_tree(self):
+        """
+        Get the underlying tree object.
+
+        :return: The tree (self.__node_list())
+        """
+        return self.__node_list
 
     class _Node(object):
         """
@@ -230,7 +260,7 @@ class DecisionTree(object):
             :param idx: The index
             """
             self.__col = idx
-            self.__split = np.mean(self.__x_data[idx])
+            self.__split = np.mean(self.__x_data[:, idx])
 
         def set_lower_split_index(self, idx):
             """
