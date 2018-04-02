@@ -14,3 +14,5 @@ Data for the various test cases I'm developing.
 
 **tests**
 Test cases of the src code.
+
+* test\_DecisionTree.py: Tests for the DecisionTree.py implementation.
