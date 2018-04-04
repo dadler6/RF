@@ -63,9 +63,9 @@ class DecisionTree(object):
         self.__node_list.append([self.__create_node__(x_data, y_data)])
         
         # Recursive fit
-        self.__recursive_fit([0, 0])
+        self.__recursive_fit__([0, 0])
         
-    def __recursive_fit(self, curr_idx):
+    def __recursive_fit__(self, curr_idx):
         """
         Recursively fit nodes while not satisfying the terminating criteria.
 
@@ -83,9 +83,9 @@ class DecisionTree(object):
             lower_idx, upper_idx = self.__create_new_nodes__(curr_idx[0], curr_idx[1])
             # Call the function if necessary
             if lower_idx[1] is not None:
-                self.__recursive_fit(lower_idx)
+                self.__recursive_fit__(lower_idx)
             if upper_idx[1] is not None:
-                self.__recursive_fit(upper_idx)
+                self.__recursive_fit__(upper_idx)
 
     def __create_node__(self, x_data, y_data):
         """
@@ -142,7 +142,7 @@ class DecisionTree(object):
         if upper_x_data.shape[0] > 0:
             upper_curr_index = len(self.__node_list[level + 1])
             self.__node_list[level + 1].append(self.__create_node__(upper_x_data, upper_y_data))
-            self.__node_list[level][n].set_lower_split_index(upper_curr_index)
+            self.__node_list[level][n].set_upper_split_index(upper_curr_index)
         else:
             upper_curr_index = None
 
@@ -176,6 +176,27 @@ class DecisionTree(object):
             return True
         return False
 
+    def __recursive_predict__(self, x_data, curr_idx):
+        """
+        Follow the tree to get the correct prediction.
+
+        :param x_data: The data we are predicting on.
+        :param curr_idx: The current node we are looking at
+        :return: The prediction
+        """
+        # Check if leaf
+        if self.__node_list[curr_idx[0]][curr_idx[1]].is_leaf():
+            return self.__node_list[curr_idx[0]][curr_idx[1]].get_prediction()
+        else:
+            # Figure out next leaf to look at
+            idx = self.__node_list[curr_idx[0]][curr_idx[1]].get_col()
+            split = self.__node_list[curr_idx[0]][curr_idx[1]].get_split()
+            if x_data[idx] < split:
+                new_idx = [curr_idx[0] + 1, self.__node_list[curr_idx[0]][curr_idx[1]].get_lower_split()]
+            else:
+                new_idx = [curr_idx[0] + 1, self.__node_list[curr_idx[0]][curr_idx[1]].get_upper_split()]
+            return self.__recursive_predict__(x_data, new_idx)
+
     def predict(self, x_data):
         """
         Predict a class using the dataset given.
@@ -183,7 +204,7 @@ class DecisionTree(object):
         :param x_data: The dataset to predict
         :return: A vector of predictions for each row in X.
         """
-        pass
+        return self.__recursive_predict__(x_data, [0, 0])
 
     def get_tree(self):
         """

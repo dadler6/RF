@@ -105,5 +105,51 @@ class TestDecisionTreeFit(unittest.TestCase):
                     self.assertEqual(pred, true_mean)
 
 
+class TestDecisionTreePredict(unittest.TestCase):
+    """
+    Test the decision tree fit class.
+    """
+
+    def setUp(self):
+        """
+        Setup internal parameters used multiple times.
+        """
+        # Create decision with leaf size as 1
+        self.leaf_terminate_1 = 1
+        self.dt_1 = DT.DecisionTree(leaf_terminate=self.leaf_terminate_1)
+
+        # Create decision tree with leaf size as 2
+        self.leaf_terminate_2 = 2
+        self.dt_2 = DT.DecisionTree(leaf_terminate=self.leaf_terminate_2)
+
+        # Make simple input data
+        self.x_data_1 = np.array([
+            [1, 4],
+            [6, 7],
+            [1, 4],
+            [2, 3],
+            [4, 5],
+            [1, 5],
+            [3, 6],
+            [1, 4],
+            [3, 1],
+            [8, 9]
+        ])
+        self.y_data_1 = np.array([5, 6, 5, 1, 6, 7, 8, 6, 4, 0])
+
+        # Train the data
+        self.dt_1.fit(self.x_data_1, self.y_data_1)
+        self.dt_2.fit(self.x_data_1, self.y_data_1)
+
+    def test_fit_1(self):
+        """
+        Test a basic prediction.
+        """
+        test_x_data_1 = np.array([1, 4])
+        result_pred_1 = self.dt_1.predict(test_x_data_1)
+        true_pred_1 = 5.33333333333
+        self.assertEqual(round(result_pred_1, 6), round(true_pred_1, 6))
+
+
 if __name__ == "__main__":
     unittest.main()
