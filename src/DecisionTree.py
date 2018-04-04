@@ -72,8 +72,6 @@ class DecisionTree(object):
         :param curr_idx: The current 2-d index the function is calling to
         """
         if not self.__terminate_fit__(curr_idx):
-            for i in self.__node_list[curr_idx[0]]:
-                print(i.get_x_data())
             # Go through each column
             col_rss = []
             for i in range(self.__ncols):
@@ -126,23 +124,12 @@ class DecisionTree(object):
         upper_x_data = x_data[x_data[:, idx] >= split_val]
         upper_y_data = y_data[x_data[:, idx] >= split_val]
 
-        # Check if the upper data (with the equals sign) has all the same rows
-        # If this is the case, randomly split the data
-        if (upper_x_data.shape[0] > 1) and ((upper_x_data[:, idx] - upper_x_data[0, idx]) == 0).all():
-            # Split the data in the middle
-            split_point = int(np.floor(upper_x_data.shape[0] / 2.0))
-            lower_x_data = upper_x_data[0:split_point, :]
-            lower_y_data = upper_y_data[0:split_point]
-            upper_x_data = upper_x_data[split_point:, :]
-            upper_y_data = upper_y_data[split_point:]
-
         # Now check if all the same in lower/upper
+        # Do not change y_data to average over all values
         if (lower_x_data.shape[0] > 1) and ((lower_x_data - lower_x_data[0, :]) == 0).all():
             lower_x_data = lower_x_data[[0], :]
-            lower_y_data = lower_y_data[0]
         if (upper_x_data.shape[0] > 1) and ((upper_x_data - upper_x_data[0, :]) == 0).all():
             upper_x_data = upper_x_data[[0], :]
-            upper_y_data = upper_y_data[0]
 
         # Make lower node if one can
         if lower_x_data.shape[0] > 0:
@@ -172,7 +159,11 @@ class DecisionTree(object):
         :return: The RSS
         """
         curr = self.__node_list[level][n].get_x_data()[:, idx]
-        return np.sum((curr - np.mean(curr))**2)
+        # Make sure not to split on axis with the same data
+        if len(np.unique(curr)) == 1:
+            return 1e10
+        else:
+            return np.sum((curr - np.mean(curr))**2)
 
     def __terminate_fit__(self, curr_idx):
         """

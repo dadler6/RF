@@ -13,7 +13,6 @@ numpy
 
 # Imports
 import numpy as np
-import pandas as pd
 import unittest
 import sys
 
@@ -27,15 +26,20 @@ class TestDecisionTreeFit(unittest.TestCase):
     Test the decision tree fit class.
     """
 
-    def test_fit_regressor_1(self):
+    def setUp(self):
         """
-        Test the regressor class with a simple dataset.
+        Setup internal parameters used multiple times.
         """
         # Create decision with leaf size as 1
-        dt_1 = DT.DecisionTree(leaf_terminate=1)
+        self.leaf_terminate_1 = 1
+        dt_1 = DT.DecisionTree(leaf_terminate=self.leaf_terminate_1)
+
+        # Create decision tree with leaf size as 2
+        self.leaf_terminate_2 = 2
+        dt_2 = DT.DecisionTree(leaf_terminate=self.leaf_terminate_2)
 
         # Make simple input data
-        x_data_1 = np.array([
+        self.x_data_1 = np.array([
             [1, 4],
             [6, 7],
             [1, 4],
@@ -47,20 +51,59 @@ class TestDecisionTreeFit(unittest.TestCase):
             [3, 1],
             [8, 9]
         ])
-        y_data_1 = np.array([5, 6, 5, 1, 6, 7, 8, 6, 4, 0])
+        self.y_data_1 = np.array([5, 6, 5, 1, 6, 7, 8, 6, 4, 0])
 
         # Train the data
-        dt_1.fit(x_data_1, y_data_1)
+        dt_1.fit(self.x_data_1, self.y_data_1)
+        dt_2.fit(self.x_data_1, self.y_data_1)
 
         # Get the result object
-        result_tree_1 = dt_1.get_tree()
+        self.result_tree_1 = dt_1.get_tree()
+        self.result_tree_2 = dt_2.get_tree()
 
-        self.assertEquals(len(result_tree_1), 5)
+    def test_leaf_size(self):
+        """
+        Test the leaf size is correct.
+        """
+        for level in self.result_tree_1:
+            for n in level:
+                if n.is_leaf():
+                    temp_x = n.get_x_data()
+                    self.assertEqual(temp_x.shape[0], self.leaf_terminate_1)
+
+        for level in self.result_tree_2:
+            for n in level:
+                if n.is_leaf():
+                    temp_x = n.get_x_data()
+                    self.assertLessEqual(temp_x.shape[0], self.leaf_terminate_2)
+
+    def test_mean_values(self):
+        """
+        Test the mean values represent the leaves.
+        """
+        for level in self.result_tree_1:
+            for n in level:
+                if n.is_leaf():
+                    temp_x = n.get_x_data()
+                    pred = n.get_prediction()
+                    idx = np.unique(np.where((self.x_data_1 == temp_x[0]).all(axis=1))[0])
+                    true_mean = np.mean(self.y_data_1[idx])
+                    self.assertEqual(pred, true_mean)
+
+        for level in self.result_tree_2:
+            for n in level:
+                if n.is_leaf():
+                    temp_x = n.get_x_data()
+                    pred = n.get_prediction()
+                    idx = np.array([])
+                    for i in range(temp_x.shape[0]):
+                        r = temp_x[i, :]
+                        new = np.unique(np.where((self.x_data_1 == r).all(axis=1))[0])
+                        idx = np.concatenate((idx, new))
+                    idx = [int(i) for i in idx]
+                    true_mean = np.mean(self.y_data_1[idx])
+                    self.assertEqual(pred, true_mean)
 
 
 if __name__ == "__main__":
     unittest.main()
-
-
-
-
