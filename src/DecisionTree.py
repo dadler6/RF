@@ -13,41 +13,56 @@ numpy
 
 # Imports
 import numpy as np
+from collections import Counter
 
 
 class DecisionTree(object):
     """
-    Decision tree class.  Will use a linked-list-esque implementation where node is a "Node" class, and the node holds
-    a cutoff, and then reference to another node.  Nodes can also hold a terminating value.
+    Abstract decision tree class.  Will use a linked-list-esque implementation where node is a "Node" class,
+    and the node holds a cutoff, and then reference to another node.  Nodes can also hold a terminating value.
 
     Parameters:
         self.__leaf_terminate: The leaf terminating criteria (how many points to left in the data to create
                              a leaf node). Defaults to 1.
-        self.__node_list
+        self.__node_list: A list of 2D nodes, where each section of the outer list is a level of the
+                          tree, and then the lists within a level are the inidividual nodes at that level
+        self.__ncols: The number of features within the given dataset.
+        self.__type: classification or regression
 
 
     Methods:
         Public
         ------
-        Initialization: initialize the decision tree. Choose the number of terminating parameters for the tree.
+        Initializaiton: Initializes the class
         fit: Takes an inputted dataset and creates the decision tree.
         predict: Takes a new dataset, and runs the algorithm to perform a prediction.
+        get_tree: Returns the tree with leaf nodes (self.__node_list)
 
         Private
         -------
         Node Class: A node class (see node class for explanation)
+        __recursive_fit__: Fits a tree recursively by calculating a column to split on
+        __create_node__: Creates a new node, and designs if it's a leaf
+        __create_new_nodes__: Create a set of new nodes by splitting
         __rss__: Calculates the residual sum of squares to split regions
+        __terminate_fit__: Checks at a stage whether each leaf satisfies the terminating criteria
+        __recursive_predict__: Does the recurisive predictions at each point
     """
 
-    def __init__(self, leaf_terminate=1):
+    def __init__(self, leaf_terminate, tree_type):
         """
         Initialize the decision tree.
 
         :param leaf_terminate: the amount of collections needed to terminate the tree with a leaf (defaults to 1)
+        :param tree_type: the type of decision tree (classification or regression)
         """
+        # Check if this is a base class
+        if self.__class__.__name__ == 'DecisionTree':
+            raise TypeError('Cannot instantiate base class DecisionTree')
         self.__leaf_terminate = leaf_terminate
         self.__node_list = []
         self.__ncols = 0
+        self.__type = tree_type
 
     def fit(self, x_data, y_data):
         """
@@ -98,7 +113,10 @@ class DecisionTree(object):
         if x_data.shape[0] > self.__leaf_terminate:
             return self._Node(False, x_data, y_data)
         else:
-            return self._Node(True, x_data, y_data)
+            if self.__type == 'classification':
+                return self._Node(True, x_data, y_data, 'classification')
+            else:
+                return self._Node(True, x_data, y_data, 'regression')
 
     def __create_new_nodes__(self, level, n):
         """
@@ -229,15 +247,32 @@ class DecisionTree(object):
                                   the coming node
             self.__upper_split: If a non-leaf node, the reference to the place in the next level list
                                   for the coming node
+
+        Methods:
+        Public
+        ------
+        Initialization: Initialize a new node, and determine if it is a leaf
+        is_leaf: True/false statement returning if this is a leaf
+        predict: Takes a new dataset, and runs the algorithm to perform a prediction.
+        set_split: Set the split amount to branch the tree
+        set_lower_split_index: Set the index to the node in the next level < split value
+        set_upper_split_index: Set the index to the node in the next level > split value
+        get_x_data: Get the x data specific to this node
+        get_y_data: Get the y data specific to this node
+
+        Private
+        -------
+
         """
 
-        def __init__(self, leaf, x_data, y_data):
+        def __init__(self, leaf, x_data, y_data, leaf_type=None):
             """
             Initialize the node.
 
             :param leaf: The true/false value (defaults to false) to say if a node is a leaf
             :param x_data: The data to be placed into the node
             :param y_data: The y_data to be averaged over if a leaf node
+            :param leaf_type: Either classification or regression
             """
             # Set leaf value
             self.__leaf = leaf
@@ -245,8 +280,11 @@ class DecisionTree(object):
             self.__y_data = y_data
 
             # If a leaf, take average of y_data
-            if self.__leaf:
+            if self.__leaf and (leaf_type == 'regression'):
                 self.__prediction = np.mean(y_data)
+            elif self.__leaf and (leaf_type == 'classification'):
+                temp_counter = Counter(y_data)
+                self.__prediction = temp_counter.most_common(1)[0][0]
             else:
                 self.__prediction = None
 
@@ -345,3 +383,33 @@ class DecisionTree(object):
             :return: self.__upper_split
             """
             return self.__upper_split
+
+
+class RegressionDecisionTree(DecisionTree):
+    """
+    Regression Decision tree class.  Will inherit the decision tree class.
+    """
+
+    def __init__(self, leaf_terminate=1):
+        """
+        Initialize the decision tree superclass.
+
+        :param leaf_terminate: the amount of collections needed to terminate the tree with a leaf (defaults to 1)
+        """
+        super().__init__(leaf_terminate, 'regression')
+
+
+class ClassificationDecisionTree(DecisionTree):
+    """
+    Classification Decision tree class.  Will inherit the decision tree class.
+
+    NOTE: If there is a class tie, this module WILL PICK the lowest class.
+    """
+
+    def __init__(self, leaf_terminate=1):
+        """
+        Initialize the decision tree.
+
+        :param leaf_terminate: the amount of collections needed to terminate the tree with a leaf (defaults to 1)
+        """
+        super().__init__(leaf_terminate, 'classification')
