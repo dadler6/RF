@@ -187,8 +187,5 @@ class TestDecisionTreePredict(unittest.TestCase):
         self.assertEqual(round(result_pred_2, 6), round(true_pred_2, 6))
 
 
-
-
-
 if __name__ == "__main__":
     unittest.main()
