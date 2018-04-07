@@ -145,10 +145,49 @@ class TestDecisionTreePredict(unittest.TestCase):
         """
         Test a basic prediction.
         """
+        # Should work for one leaf
         test_x_data_1 = np.array([1, 4])
         result_pred_1 = self.dt_1.predict(test_x_data_1)
         true_pred_1 = 5.33333333333
         self.assertEqual(round(result_pred_1, 6), round(true_pred_1, 6))
+
+        # Should also work with two leaves (since [1, 4] appears three times
+        result_pred_2 = self.dt_2.predict(test_x_data_1)
+        self.assertEqual(round(result_pred_2, 6), round(true_pred_1, 6))
+
+    def test_fit_2(self):
+        """
+        Test a prediction of something that only appears once in the
+        tree.
+        """
+        # Tree with one leaf
+        test_x_data_2 = np.array([3, 1])
+        result_pred_1 = self.dt_1.predict(test_x_data_2)
+        true_pred_1 = 4
+        self.assertEqual(round(result_pred_1, 6), round(true_pred_1, 6))
+
+        # Tree with two leaves
+        result_pred_2 = self.dt_2.predict(test_x_data_2)
+        true_pred_2 = 2.5
+        self.assertEqual(round(result_pred_2, 6), round(true_pred_2, 6))
+
+    def test_fit_3(self):
+        """
+        Test a prediction of something that never appears in the tree.
+        """
+        # Tree with one leaf
+        test_x_data_3 = np.array([7, 4])
+        result_pred_1 = self.dt_1.predict(test_x_data_3)
+        true_pred_1 = 4
+        self.assertEqual(round(result_pred_1, 6), round(true_pred_1, 6))
+
+        # Tree with two leaves
+        result_pred_2 = self.dt_2.predict(test_x_data_3)
+        true_pred_2 = 2.5
+        self.assertEqual(round(result_pred_2, 6), round(true_pred_2, 6))
+
+
+
 
 
 if __name__ == "__main__":
