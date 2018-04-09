@@ -33,11 +33,11 @@ class TestRegressionDecisionTreeFit(unittest.TestCase):
         """
         # Create decision with leaf size as 1
         self.leaf_terminate_1 = 1
-        dt_1 = DT.RegressionDecisionTree(leaf_terminate=self.leaf_terminate_1)
+        dt_1 = DT.RegressionDecisionTree(leaf_terminate=self.leaf_terminate_1, split_type='rss')
 
         # Create decision tree with leaf size as 2
         self.leaf_terminate_2 = 2
-        dt_2 = DT.RegressionDecisionTree(leaf_terminate=self.leaf_terminate_2)
+        dt_2 = DT.RegressionDecisionTree(leaf_terminate=self.leaf_terminate_2, split_type='rss')
 
         # Make simple input data
         self.x_data_1 = np.array([
@@ -117,11 +117,11 @@ class TestRegressionDecisionTreePredict(unittest.TestCase):
         """
         # Create decision with leaf size as 1
         self.leaf_terminate_1 = 1
-        self.dt_1 = DT.RegressionDecisionTree(leaf_terminate=self.leaf_terminate_1)
+        self.dt_1 = DT.RegressionDecisionTree(leaf_terminate=self.leaf_terminate_1, split_type='rss')
 
         # Create decision tree with leaf size as 2
         self.leaf_terminate_2 = 2
-        self.dt_2 = DT.RegressionDecisionTree(leaf_terminate=self.leaf_terminate_2)
+        self.dt_2 = DT.RegressionDecisionTree(leaf_terminate=self.leaf_terminate_2, split_type='rss')
 
         # Make simple input data
         self.x_data_1 = np.array([
@@ -199,11 +199,11 @@ class TestClassificationDecisionTreeFit(unittest.TestCase):
         """
         # Create decision with leaf size as 1
         self.leaf_terminate_1 = 1
-        dt_1 = DT.ClassificationDecisionTree(leaf_terminate=self.leaf_terminate_1)
+        dt_1 = DT.ClassificationDecisionTree(leaf_terminate=self.leaf_terminate_1, split_type='rss')
 
         # Create decision tree with leaf size as 2
         self.leaf_terminate_2 = 2
-        dt_2 = DT.ClassificationDecisionTree(leaf_terminate=self.leaf_terminate_2)
+        dt_2 = DT.ClassificationDecisionTree(leaf_terminate=self.leaf_terminate_2, split_type='rss')
 
         # Make simple input data
         self.x_data_1 = np.array([
@@ -267,11 +267,11 @@ class TestClassificationDecisionTreePredict(unittest.TestCase):
         """
         # Create decision with leaf size as 1
         self.leaf_terminate_1 = 1
-        self.dt_1 = DT.ClassificationDecisionTree(leaf_terminate=self.leaf_terminate_1)
+        self.dt_1 = DT.ClassificationDecisionTree(leaf_terminate=self.leaf_terminate_1, split_type='rss')
 
         # Create decision tree with leaf size as 2
         self.leaf_terminate_2 = 2
-        self.dt_2 = DT.ClassificationDecisionTree(leaf_terminate=self.leaf_terminate_2)
+        self.dt_2 = DT.ClassificationDecisionTree(leaf_terminate=self.leaf_terminate_2, split_type='rss')
 
         # Make simple input data
         self.x_data_1 = np.array([

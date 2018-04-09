@@ -28,6 +28,7 @@ class DecisionTree(object):
                           tree, and then the lists within a level are the inidividual nodes at that level
         self.__ncols: The number of features within the given dataset.
         self.__type: classification or regression
+        self.__split_type: type of splitting
 
 
     Methods:
@@ -49,7 +50,7 @@ class DecisionTree(object):
         __recursive_predict__: Does the recurisive predictions at each point
     """
 
-    def __init__(self, leaf_terminate, tree_type):
+    def __init__(self, leaf_terminate, tree_type, split_type):
         """
         Initialize the decision tree.
 
@@ -59,10 +60,15 @@ class DecisionTree(object):
         # Check if this is a base class
         if self.__class__.__name__ == 'DecisionTree':
             raise TypeError('Cannot instantiate base class DecisionTree')
+        # Check to make sure that split type is not 'gini' for regression
+        elif self.__class__.__name__ == 'RegressionDecisionTree':
+            if split_type == 'gini':
+                raise ValueError('Cannot have split_type=gini for class RegressionDecisionTree')
         self.__leaf_terminate = leaf_terminate
         self.__node_list = []
         self.__ncols = 0
         self.__type = tree_type
+        self.__split_type = split_type
 
     def fit(self, x_data, y_data):
         """
@@ -88,12 +94,13 @@ class DecisionTree(object):
         """
         if not self.__terminate_fit__(curr_idx):
             # Go through each column
-            col_rss = []
-            for i in range(self.__ncols):
-                col_rss.append(self.__rss__(curr_idx[0], curr_idx[1], i))
-            split_col = np.argmin(col_rss)
-            # Set the split
-            self.__node_list[curr_idx[0]][curr_idx[1]].set_split(split_col)
+            if self.__split_type == 'rss':
+                split_col = self.__rss_split__(curr_idx)
+                # Set the split
+                self.__node_list[curr_idx[0]][curr_idx[1]].set_split(split_col)
+            else:
+                split_col, val = self.__gini_split__(curr_idx)
+                self.__node_list[curr_idx[0]][curr_idx[1]].set_split(split_col, val)
             # Create new nodes
             lower_idx, upper_idx = self.__create_new_nodes__(curr_idx[0], curr_idx[1])
             # Call the function if necessary
@@ -118,6 +125,27 @@ class DecisionTree(object):
             else:
                 return self._Node(True, x_data, y_data, 'regression')
 
+    def __split_data__(self, level, n, idx, split_val):
+        """
+        Split the data based upon a value.
+
+        :param level: the level
+        :param n: the node index in the level
+        :param idx: the index to split on
+        :param split_val: the split value
+
+        :return: the split
+        """
+        x_data = self.__node_list[level][n].get_x_data()
+        y_data = self.__node_list[level][n].get_y_data()
+
+        lower_x_data = x_data[x_data[:, idx] < split_val]
+        lower_y_data = y_data[x_data[:, idx] < split_val]
+        upper_x_data = x_data[x_data[:, idx] >= split_val]
+        upper_y_data = y_data[x_data[:, idx] >= split_val]
+
+        return lower_x_data, lower_y_data, upper_x_data, upper_y_data
+
     def __create_new_nodes__(self, level, n):
         """
         Create the next level of nodes. Splits the data based upon the specified axis, and
@@ -132,15 +160,10 @@ class DecisionTree(object):
             self.__node_list.append([])
 
         split_val = self.__node_list[level][n].get_split()
-        x_data = self.__node_list[level][n].get_x_data()
-        y_data = self.__node_list[level][n].get_y_data()
         idx = self.__node_list[level][n].get_col()
 
         # Split data
-        lower_x_data = x_data[x_data[:, idx] < split_val]
-        lower_y_data = y_data[x_data[:, idx] < split_val]
-        upper_x_data = x_data[x_data[:, idx] >= split_val]
-        upper_y_data = y_data[x_data[:, idx] >= split_val]
+        lower_x_data, lower_y_data, upper_x_data, upper_y_data = self.__split_data__(level, n, idx, split_val)
 
         # Now check if all the same in lower/upper
         # Do not change y_data to average over all values
@@ -166,6 +189,19 @@ class DecisionTree(object):
 
         return [level + 1, lower_curr_index], [level + 1, upper_curr_index]
 
+    def __rss_split__(self, curr_idx):
+        """
+        Find split using the rss criteria
+
+        :param curr_idx: The current 2-d index the function is calling to
+
+        :return: the split column
+        """
+        col_rss = []
+        for i in range(self.__ncols):
+            col_rss.append(self.__rss__(curr_idx[0], curr_idx[1], i))
+        return np.argmin(col_rss)
+
     def __rss__(self, level, n, idx):
         """
         Calculates the residual sum of square errors for a specific region.
@@ -182,6 +218,58 @@ class DecisionTree(object):
             return 1e10
         else:
             return np.sum((curr - np.mean(curr))**2)
+
+    def __gini_split__(self, curr_idx):
+        """
+        Find split using the gini impurity index. Will sort through all columns and values
+        to try and choose which column/value to split on.
+
+        :param curr_idx: The current 2-d index the function is calling to
+
+        :return: the column/value to split on
+        """
+        level, n = curr_idx[0], curr_idx[1]
+        x_data = self.__node_list[level][n].get_y_data()
+        col_max = []
+        for i in range(self.__ncols):
+            temp_max = []
+            for j in x_data[:, i]:
+                temp_max.append(self.__gini_impurity_gain__(curr_idx[0], curr_idx[1], i, j))
+            col_max.append(np.max(temp_max))
+
+        return np.argmax(col_max), np.max(col_max)
+
+    @staticmethod
+    def __gini_impurity__(y_data):
+        """
+        Calculate the gini impurity (1 - sum(p(i)^2)
+
+        :param y_data: the y data
+
+        :return: the impurity
+        """
+        _, counts = np.unique(y_data, return_counts=True)
+        return 1 - np.sum((counts / np.sum(counts))**2)
+
+    def __gini_impurity_gain__(self, level, n, idx, split_val):
+        """
+        Calculates the gain in gini impurity for a specific region.
+        Should ONLY be used in classification problems.
+        Gain = Curr Gini * Size - sum_{new nodes}(new_gini * size)
+
+        :param level: The level in the dictionary to look at
+        :param n: The node index to calculate the rss for
+        :param idx: The column index in the matrix to calculate values for
+        :param split_val: The value to split on
+
+        :return: The gini impurity for this split
+        """
+        y_data = self.__node_list[level][n].get_y_data()
+        _, lower_y_data, _, upper_y_data = self.__split_data__(level, n, idx, split_val)
+        curr = self.__gini_impurity__(y_data)*len(y_data)
+        lower = self.__gini_impurity__(lower_y_data)*len(lower_y_data)
+        upper = self.__gini_impurity__(upper_y_data)*len(upper_y_data)
+        return curr - (lower + upper)
 
     def __terminate_fit__(self, curr_idx):
         """
@@ -302,15 +390,19 @@ class DecisionTree(object):
             """
             return self.__leaf
 
-        def set_split(self, idx):
+        def set_split(self, idx, val=None):
             """
             Set the column/split index this node splits on.  Also
             sets the split value for a non-leaf node.
 
             :param idx: The index
+            :param val: Specific value.  Will take mean if none given
             """
             self.__col = idx
-            self.__split = np.mean(self.__x_data[:, idx])
+            if val is None:
+                self.__split = np.mean(self.__x_data[:, idx])
+            else:
+                self.__split = val
 
         def set_lower_split_index(self, idx):
             """
@@ -390,13 +482,14 @@ class RegressionDecisionTree(DecisionTree):
     Regression Decision tree class.  Will inherit the decision tree class.
     """
 
-    def __init__(self, leaf_terminate=1):
+    def __init__(self, leaf_terminate=1, split_type='rss'):
         """
         Initialize the decision tree superclass.
 
         :param leaf_terminate: the amount of collections needed to terminate the tree with a leaf (defaults to 1)
+        :param split_type: the criteria to split on
         """
-        super().__init__(leaf_terminate, 'regression')
+        super().__init__(leaf_terminate, 'regression', split_type)
 
 
 class ClassificationDecisionTree(DecisionTree):
@@ -406,10 +499,11 @@ class ClassificationDecisionTree(DecisionTree):
     NOTE: If there is a class tie, this module WILL PICK the lowest class.
     """
 
-    def __init__(self, leaf_terminate=1):
+    def __init__(self, leaf_terminate=1, split_type='gini'):
         """
         Initialize the decision tree.
 
         :param leaf_terminate: the amount of collections needed to terminate the tree with a leaf (defaults to 1)
+        :param split_type: the criteria to split on
         """
-        super().__init__(leaf_terminate, 'classification')
+        super().__init__(leaf_terminate, 'classification', split_type)
