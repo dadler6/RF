@@ -64,6 +64,9 @@ class DecisionTree(object):
         elif self.__class__.__name__ == 'RegressionDecisionTree':
             if split_type == 'gini':
                 raise ValueError('Cannot have split_type=gini for class RegressionDecisionTree')
+        elif self.__class__.__name__ == 'ClassificationDecisionTree':
+            if split_type == 'rss':
+                raise ValueError('Cannot have split_type=rss for class ClassificationDecisionTree')
         self.__leaf_terminate = leaf_terminate
         self.__node_list = []
         self.__ncols = 0
@@ -92,17 +95,18 @@ class DecisionTree(object):
 
         :param curr_idx: The current 2-d index the function is calling to
         """
+        level, n = curr_idx[0], curr_idx[1]
         if not self.__terminate_fit__(curr_idx):
             # Go through each column
             if self.__split_type == 'rss':
-                split_col = self.__rss_split__(curr_idx)
+                split_col, val = self.__find_split__(curr_idx, np.min, np.argmin, self.__rss__)
                 # Set the split
-                self.__node_list[curr_idx[0]][curr_idx[1]].set_split(split_col)
+                self.__node_list[level][n].set_split(split_col, val)
             else:
-                split_col, val = self.__gini_split__(curr_idx)
-                self.__node_list[curr_idx[0]][curr_idx[1]].set_split(split_col, val)
+                split_col, val = self.__find_split__(curr_idx, np.max, np.argmax, self.__gini_impurity_gain__)
+                self.__node_list[level][n].set_split(split_col, val)
             # Create new nodes
-            lower_idx, upper_idx = self.__create_new_nodes__(curr_idx[0], curr_idx[1])
+            lower_idx, upper_idx = self.__create_new_nodes__(level, n)
             # Call the function if necessary
             if lower_idx[1] is not None:
                 self.__recursive_fit__(lower_idx)
@@ -171,7 +175,6 @@ class DecisionTree(object):
             lower_x_data = lower_x_data[[0], :]
         if (upper_x_data.shape[0] > 1) and ((upper_x_data - upper_x_data[0, :]) == 0).all():
             upper_x_data = upper_x_data[[0], :]
-
         # Make lower node if one can
         if lower_x_data.shape[0] > 0:
             lower_curr_index = len(self.__node_list[level + 1])
@@ -189,55 +192,56 @@ class DecisionTree(object):
 
         return [level + 1, lower_curr_index], [level + 1, upper_curr_index]
 
-    def __rss_split__(self, curr_idx):
+    def __find_split__(self, curr_idx, decision_func, arg_func, criteria_func):
         """
-        Find split using the rss criteria
+        Find split using the given criteria
 
         :param curr_idx: The current 2-d index the function is calling to
+        :param decision_func: np.min/np.max depending if rss vs. gini
+        :param arg_func: np.argmin/np.argmax depending if rss vs. gini
+        :param criteria_func: either self.__rss__ or self.__gini_impurity_gain__
 
-        :return: the split column
+        :return: the split column/value
         """
-        col_rss = []
+        level, n = curr_idx[0], curr_idx[1]
+        x_data = self.__node_list[level][n].get_x_data()
+        col_min = []
+        col_val = []
         for i in range(self.__ncols):
-            col_rss.append(self.__rss__(curr_idx[0], curr_idx[1], i))
-        return np.argmin(col_rss)
+            temp_desc = []
+            temp_val = []
+            temp_list = list(np.unique(x_data[:, i]))
+            temp_list.sort()
+            for j in range(len(temp_list) - 1):
+                m = np.mean([temp_list[j], temp_list[j + 1]])
+                temp_val.append(m)
+                temp_desc.append(criteria_func(curr_idx[0], curr_idx[1], i, m))
+            # Checks
+            if len(temp_desc) == 0:
+                if decision_func == np.min:
+                    temp_desc.append(1e10)
+                else:
+                    temp_desc.append(-1e10)
+                temp_val.append(0)
+            col_min.append(decision_func(temp_desc))
+            col_val.append(temp_val[arg_func(temp_desc)])
 
-    def __rss__(self, level, n, idx):
+        return arg_func(col_min), col_val[arg_func(col_min)]
+
+    def __rss__(self, level, n, idx, split_val):
         """
         Calculates the residual sum of square errors for a specific region.
 
         :param level: The level in the dictionary to look at
         :param n: The node index to calculate the rss for
         :param idx: The column index in the matrix to calculate values for
+        :param split_val: The value to split on
 
         :return: The RSS
         """
-        curr = self.__node_list[level][n].get_x_data()[:, idx]
-        # Make sure not to split on axis with the same data
-        if len(np.unique(curr)) == 1:
-            return 1e10
-        else:
-            return np.sum((curr - np.mean(curr))**2)
-
-    def __gini_split__(self, curr_idx):
-        """
-        Find split using the gini impurity index. Will sort through all columns and values
-        to try and choose which column/value to split on.
-
-        :param curr_idx: The current 2-d index the function is calling to
-
-        :return: the column/value to split on
-        """
-        level, n = curr_idx[0], curr_idx[1]
-        x_data = self.__node_list[level][n].get_y_data()
-        col_max = []
-        for i in range(self.__ncols):
-            temp_max = []
-            for j in x_data[:, i]:
-                temp_max.append(self.__gini_impurity_gain__(curr_idx[0], curr_idx[1], i, j))
-            col_max.append(np.max(temp_max))
-
-        return np.argmax(col_max), np.max(col_max)
+        curr = self.__node_list[level][n].get_y_data()
+        _, lower_y_data, _, upper_y_data = self.__split_data__(level, n, idx, split_val)
+        return np.sum((lower_y_data - np.mean(lower_y_data))**2) + np.sum((upper_y_data - np.mean(upper_y_data))**2)
 
     @staticmethod
     def __gini_impurity__(y_data):
@@ -390,19 +394,16 @@ class DecisionTree(object):
             """
             return self.__leaf
 
-        def set_split(self, idx, val=None):
+        def set_split(self, idx, val):
             """
             Set the column/split index this node splits on.  Also
             sets the split value for a non-leaf node.
 
             :param idx: The index
-            :param val: Specific value.  Will take mean if none given
+            :param val: Specific value
             """
             self.__col = idx
-            if val is None:
-                self.__split = np.mean(self.__x_data[:, idx])
-            else:
-                self.__split = val
+            self.__split = val
 
         def set_lower_split_index(self, idx):
             """

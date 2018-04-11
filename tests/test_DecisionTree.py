@@ -179,12 +179,12 @@ class TestRegressionDecisionTreePredict(unittest.TestCase):
         # Tree with one leaf
         test_x_data_3 = np.array([7, 4])
         result_pred_1 = self.dt_1.predict(test_x_data_3)
-        true_pred_1 = 4
+        true_pred_1 = 0.0
         self.assertEqual(round(result_pred_1, 6), round(true_pred_1, 6))
 
         # Tree with two leaves
         result_pred_2 = self.dt_2.predict(test_x_data_3)
-        true_pred_2 = 2.5
+        true_pred_2 = 0.0
         self.assertEqual(round(result_pred_2, 6), round(true_pred_2, 6))
 
 
@@ -199,11 +199,11 @@ class TestClassificationDecisionTreeFit(unittest.TestCase):
         """
         # Create decision with leaf size as 1
         self.leaf_terminate_1 = 1
-        dt_1 = DT.ClassificationDecisionTree(leaf_terminate=self.leaf_terminate_1, split_type='rss')
+        dt_1 = DT.ClassificationDecisionTree(leaf_terminate=self.leaf_terminate_1, split_type='gini')
 
         # Create decision tree with leaf size as 2
         self.leaf_terminate_2 = 2
-        dt_2 = DT.ClassificationDecisionTree(leaf_terminate=self.leaf_terminate_2, split_type='rss')
+        dt_2 = DT.ClassificationDecisionTree(leaf_terminate=self.leaf_terminate_2, split_type='gini')
 
         # Make simple input data
         self.x_data_1 = np.array([
@@ -267,11 +267,11 @@ class TestClassificationDecisionTreePredict(unittest.TestCase):
         """
         # Create decision with leaf size as 1
         self.leaf_terminate_1 = 1
-        self.dt_1 = DT.ClassificationDecisionTree(leaf_terminate=self.leaf_terminate_1, split_type='rss')
+        self.dt_1 = DT.ClassificationDecisionTree(leaf_terminate=self.leaf_terminate_1, split_type='gini')
 
         # Create decision tree with leaf size as 2
         self.leaf_terminate_2 = 2
-        self.dt_2 = DT.ClassificationDecisionTree(leaf_terminate=self.leaf_terminate_2, split_type='rss')
+        self.dt_2 = DT.ClassificationDecisionTree(leaf_terminate=self.leaf_terminate_2, split_type='gini')
 
         # Make simple input data
         self.x_data_1 = np.array([
@@ -329,12 +329,12 @@ class TestClassificationDecisionTreePredict(unittest.TestCase):
         # Tree with one leaf
         test_x_data_3 = np.array([7, 4])
         result_pred_1 = self.dt_1.predict(test_x_data_3)
-        true_pred_1 = 0
+        true_pred_1 = 1.0
         self.assertEqual(round(result_pred_1, 6), round(true_pred_1, 6))
 
         # Tree with two leaves
         result_pred_2 = self.dt_2.predict(test_x_data_3)
-        true_pred_2 = 0
+        true_pred_2 = 1.0
         self.assertEqual(round(result_pred_2, 6), round(true_pred_2, 6))
 
 
