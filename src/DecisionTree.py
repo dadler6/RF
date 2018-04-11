@@ -239,7 +239,6 @@ class DecisionTree(object):
 
         :return: The RSS
         """
-        curr = self.__node_list[level][n].get_y_data()
         _, lower_y_data, _, upper_y_data = self.__split_data__(level, n, idx, split_val)
         return np.sum((lower_y_data - np.mean(lower_y_data))**2) + np.sum((upper_y_data - np.mean(upper_y_data))**2)
 
