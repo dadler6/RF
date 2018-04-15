@@ -23,7 +23,8 @@ class DecisionTree(object):
 
     Parameters:
         self.__leaf_terminate: The leaf terminating criteria (how many points to left in the data to create
-                             a leaf node). Defaults to 1.
+                             a leaf node). Defaults to 1 or None (if termination criteria = 'leaf'.
+        self.__pure_terminate: True/False pending if the termination criteria is pure for classification trees
         self.__node_list: A list of 2D nodes, where each section of the outer list is a level of the
                           tree, and then the lists within a level are the inidividual nodes at that level
         self.__ncols: The number of features within the given dataset.
@@ -34,7 +35,7 @@ class DecisionTree(object):
     Methods:
         Public
         ------
-        Initializaiton: Initializes the class
+        Initialization: Initializes the class
         fit: Takes an inputted dataset and creates the decision tree.
         predict: Takes a new dataset, and runs the algorithm to perform a prediction.
         get_tree: Returns the tree with leaf nodes (self.__node_list)
@@ -50,11 +51,12 @@ class DecisionTree(object):
         __recursive_predict__: Does the recurisive predictions at each point
     """
 
-    def __init__(self, leaf_terminate, tree_type, split_type):
+    def __init__(self, tree_type, split_type, terminate='leaf', leaf_terminate=None):
         """
         Initialize the decision tree.
-
-        :param leaf_terminate: the amount of collections needed to terminate the tree with a leaf (defaults to 1)
+        :param tree_type: either classification or regression
+        :param split_type: the criterion to split a node (either rss or gini)
+        :param terminate: the termination criteria (defaults to leaf, can be 'pure' if classification)
         :param tree_type: the type of decision tree (classification or regression)
         """
         # Check if this is a base class
@@ -64,10 +66,20 @@ class DecisionTree(object):
         elif self.__class__.__name__ == 'RegressionDecisionTree':
             if split_type == 'gini':
                 raise ValueError('Cannot have split_type=gini for class RegressionDecisionTree')
-        elif self.__class__.__name__ == 'ClassificationDecisionTree':
+            if terminate == 'pure':
+                raise ValueError('Cannot have a pure termination for class RegressionDecisionTree')
+        else:  # Will default to this is a ClassificationDecisionTree
             if split_type == 'rss':
                 raise ValueError('Cannot have split_type=rss for class ClassificationDecisionTree')
-        self.__leaf_terminate = leaf_terminate
+        # Check termination criteria
+        if terminate == 'leaf':
+            if (leaf_terminate is None) or leaf_terminate < 1:
+                raise ValueError('Cannot have non-positive termination criteria for terminate == "leaf"')
+            self.__leaf_terminate = leaf_terminate
+            self.__pure_terminate = False
+        else:
+            self.__leaf_terminate = None
+            self.__pure_terminate = True
         self.__node_list = []
         self.__ncols = 0
         self.__type = tree_type
@@ -121,13 +133,18 @@ class DecisionTree(object):
         :param y_data: The prediction data to create the node
         :return: The new node object
         """
-        if x_data.shape[0] > self.__leaf_terminate:
-            return self._Node(False, x_data, y_data)
+        # Return if leaf
+        if self.__pure_terminate:
+            pass
+            # TODO add termination criteria for pure
+        elif x_data.shape[0] > self.__leaf_terminate:
+                return self._Node(False, x_data, y_data)
+
+        # Return if branching node
+        if self.__type == 'classification':
+            return self._Node(True, x_data, y_data, 'classification')
         else:
-            if self.__type == 'classification':
-                return self._Node(True, x_data, y_data, 'classification')
-            else:
-                return self._Node(True, x_data, y_data, 'regression')
+            return self._Node(True, x_data, y_data, 'regression')
 
     def __split_data__(self, level, n, idx, split_val):
         """
@@ -482,14 +499,14 @@ class RegressionDecisionTree(DecisionTree):
     Regression Decision tree class.  Will inherit the decision tree class.
     """
 
-    def __init__(self, leaf_terminate=1, split_type='rss'):
+    def __init__(self, split_type='rss', leaf_terminate=1):
         """
         Initialize the decision tree superclass.
 
         :param leaf_terminate: the amount of collections needed to terminate the tree with a leaf (defaults to 1)
         :param split_type: the criteria to split on
         """
-        super().__init__(leaf_terminate, 'regression', split_type)
+        super().__init__('regression', split_type, terminate='leaf', leaf_terminate=leaf_terminate)
 
 
 class ClassificationDecisionTree(DecisionTree):
@@ -499,11 +516,12 @@ class ClassificationDecisionTree(DecisionTree):
     NOTE: If there is a class tie, this module WILL PICK the lowest class.
     """
 
-    def __init__(self, leaf_terminate=1, split_type='gini'):
+    def __init__(self, split_type='gini', terminate='leaf', leaf_terminate=1):
         """
         Initialize the decision tree.
 
         :param leaf_terminate: the amount of collections needed to terminate the tree with a leaf (defaults to 1)
+        :param terminate: the way to terminate the classification tree (leaf/pure)
         :param split_type: the criteria to split on
         """
-        super().__init__(leaf_terminate, 'classification', split_type)
+        super().__init__('classification', split_type, terminate=terminate, leaf_terminate=leaf_terminate)
