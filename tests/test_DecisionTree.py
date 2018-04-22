@@ -225,6 +225,12 @@ class TestClassificationDecisionTreeFit(unittest.TestCase):
             leaf_terminate=self.leaf_terminate_2
         )
 
+        # Create decision tree with leaf pure termination criteria
+        dt_3_pure = DT.ClassificationDecisionTree(
+            split_type='gini',
+            terminate='pure',
+        )
+
         # Make simple input data
         self.x_data_1 = np.array([
             [1, 4],
@@ -243,14 +249,17 @@ class TestClassificationDecisionTreeFit(unittest.TestCase):
         # Train the data
         dt_1.fit(self.x_data_1, self.y_data_1)
         dt_2.fit(self.x_data_1, self.y_data_1)
+        dt_3_pure.fit(self.x_data_1, self.y_data_1)
 
         # Get the result object
         self.result_tree_1 = dt_1.get_tree()
         self.result_tree_2 = dt_2.get_tree()
+        self.result_tree_3 = dt_3_pure.get_tree()
 
-    def test_class_values(self):
+    def test_class_values_leaf_terminate(self):
         """
-        Test the mean values represent the leaves.
+        Test the majority values represent the leaves, and that the termination
+        criteria is reached.
         """
         for level in self.result_tree_1:
             for n in level:
@@ -267,6 +276,27 @@ class TestClassificationDecisionTreeFit(unittest.TestCase):
                     temp_x = n.get_x_data()
                     pred = n.get_prediction()
                     idx = np.array([])
+                    for i in range(temp_x.shape[0]):
+                        r = temp_x[i, :]
+                        new = np.unique(np.where((self.x_data_1 == r).all(axis=1))[0])
+                        idx = np.concatenate((idx, new))
+                    idx = [int(i) for i in idx]
+                    true_class = Counter(self.y_data_1[idx]).most_common(1)[0][0]
+                    self.assertEqual(pred, true_class)
+
+    def test_class_values_pure_terminate(self):
+        """
+        Test that leaves represent one single class, or that the x data size is one.
+        """
+        for level in self.result_tree_3:
+            for n in level:
+                if n.is_leaf():
+                    temp_x = n.get_x_data()
+                    temp_y = n.get_y_data()
+                    pred = n.get_prediction()
+                    idx = np.array([])
+                    # Assert that either y data is shape 1, or that the x data is shape 1
+                    self.assertTrue((len(np.unique(temp_y)) == 1) or (temp_x.shape[0] == 1))
                     for i in range(temp_x.shape[0]):
                         r = temp_x[i, :]
                         new = np.unique(np.where((self.x_data_1 == r).all(axis=1))[0])
@@ -301,6 +331,12 @@ class TestClassificationDecisionTreePredict(unittest.TestCase):
             leaf_terminate=self.leaf_terminate_2
         )
 
+        # Create decision tree with leaf pure termination criteria
+        self.dt_3_pure = DT.ClassificationDecisionTree(
+            split_type='gini',
+            terminate='pure',
+        )
+
         # Make simple input data
         self.x_data_1 = np.array([
             [1, 4],
@@ -319,6 +355,7 @@ class TestClassificationDecisionTreePredict(unittest.TestCase):
         # Train the data
         self.dt_1.fit(self.x_data_1, self.y_data_1)
         self.dt_2.fit(self.x_data_1, self.y_data_1)
+        self.dt_3_pure.fit(self.x_data_1, self.y_data_1)
 
     def test_fit_1(self):
         """
@@ -333,6 +370,10 @@ class TestClassificationDecisionTreePredict(unittest.TestCase):
         # Should also work with two leaves (since [1, 4] appears three times
         result_pred_2 = self.dt_2.predict(test_x_data_1)
         self.assertEqual(round(result_pred_2, 6), round(true_pred_1, 6))
+
+        # [1, 4] should pick majority class which 1
+        result_pred_3 = self.dt_3_pure.predict(test_x_data_1)
+        self.assertEqual(round(result_pred_3, 6), round(true_pred_1, 6))
 
     def test_fit_2(self):
         """
@@ -350,6 +391,11 @@ class TestClassificationDecisionTreePredict(unittest.TestCase):
         true_pred_2 = 0
         self.assertEqual(round(result_pred_2, 6), round(true_pred_2, 6))
 
+        # Tree with pure pruning
+        result_pred_3 = self.dt_3_pure.predict(test_x_data_2)
+        true_pred_3 = 0
+        self.assertEqual(round(result_pred_3, 6), round(true_pred_3, 6))
+
     def test_fit_3(self):
         """
         Test a prediction of something that never appears in the tree.
@@ -364,6 +410,11 @@ class TestClassificationDecisionTreePredict(unittest.TestCase):
         result_pred_2 = self.dt_2.predict(test_x_data_3)
         true_pred_2 = 1.0
         self.assertEqual(round(result_pred_2, 6), round(true_pred_2, 6))
+
+        # Tree with two leaves
+        result_pred_3 = self.dt_3_pure.predict(test_x_data_3)
+        true_pred_3 = 1.0
+        self.assertEqual(round(result_pred_3, 6), round(true_pred_3, 6))
 
 
 if __name__ == "__main__":

@@ -135,9 +135,12 @@ class DecisionTree(object):
         """
         # Return if leaf
         if self.__pure_terminate:
-            pass
-            # TODO add termination criteria for pure
-        elif x_data.shape[0] > self.__leaf_terminate:
+            # Check y_data holds one unique value
+            if len(np.unique(y_data)) > 1 and x_data.shape[0] > 1:
+                return self._Node(False, x_data, y_data)
+        else:
+            # Check leaf size
+            if x_data.shape[0] > self.__leaf_terminate:
                 return self._Node(False, x_data, y_data)
 
         # Return if branching node
