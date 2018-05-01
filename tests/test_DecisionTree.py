@@ -306,6 +306,93 @@ class TestClassificationDecisionTreeFit(unittest.TestCase):
                     self.assertEqual(pred, true_class)
 
 
+class TestClassificationDecisionTreeFitGain(unittest.TestCase):
+    """
+    Test the classification decision tree fit class.
+    """
+
+    def setUp(self):
+        """
+        Setup internal parameters used multiple times.
+        """
+        # Create decision with tree with a gain ratio
+
+        # Create decision tree with leaf pure termination criteria
+        dt_1 = DT.ClassificationDecisionTree(
+            split_type='gain_ratio',
+            terminate='pure',
+        )
+        dt_2 = DT.ClassificationDecisionTree(
+            split_type='gini',
+            terminate='pure',
+        )
+
+        # Make simple input data
+        self.x_data_1 = np.array([
+            [1, 1],
+            [2, 1],
+            [3, 1],
+            [4, 1],
+            [5, 1],
+            [6, 2],
+            [7, 2],
+            [8, 2],
+            [9, 2],
+            [10, 2]
+        ])
+        self.y_data_1 = np.array([0, 1, 1, 0, 1, 0, 1, 1, 0, 1])
+
+        # Train the data
+        dt_1.fit(self.x_data_1, self.y_data_1)
+        dt_2.fit(self.x_data_1, self.y_data_1)
+
+        # Get the result object
+        self.result_tree_1 = dt_1.get_tree()
+        self.result_tree_2 = dt_2.get_tree()
+
+    def test_class_values_pure_terminate(self):
+        """
+        Test that leaves represent one single class, or that the x data size is one.
+        """
+        for level in self.result_tree_1:
+            for n in level:
+                if n.is_leaf():
+                    temp_x = n.get_x_data()
+                    temp_y = n.get_y_data()
+                    pred = n.get_prediction()
+                    idx = np.array([])
+                    # Assert that either y data is shape 1, or that the x data is shape 1
+                    self.assertTrue((len(np.unique(temp_y)) == 1) or (temp_x.shape[0] == 1))
+                    for i in range(temp_x.shape[0]):
+                        r = temp_x[i, :]
+                        new = np.unique(np.where((self.x_data_1 == r).all(axis=1))[0])
+                        idx = np.concatenate((idx, new))
+                    idx = [int(i) for i in idx]
+                    true_class = Counter(self.y_data_1[idx]).most_common(1)[0][0]
+                    self.assertEqual(pred, true_class)
+
+    def test_gain_ratio_axis(self):
+        """
+        Test the gain ratio picks the less varied axis more time than the original.
+        """
+        split_axis_1 = []
+        for level in self.result_tree_1:
+            for n in level:
+                if not n.is_leaf():
+                    split_axis_1.append(n.get_col())
+
+        split_axis_2 = []
+        for level in self.result_tree_2:
+            for n in level:
+                if not n.is_leaf():
+                    split_axis_2.append(n.get_col())
+
+        bin_count_1 = np.bincount(split_axis_1, minlength=2)
+        bin_count_2 = np.bincount(split_axis_2, minlength=2)
+
+        self.assertGreater(bin_count_1[1], bin_count_2[1])
+
+
 class TestClassificationDecisionTreePredict(unittest.TestCase):
     """
     Test the classification decision tree fit class.

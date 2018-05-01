@@ -55,7 +55,7 @@ class DecisionTree(object):
         """
         Initialize the decision tree.
         :param tree_type: either classification or regression
-        :param split_type: the criterion to split a node (either rss or gini)
+        :param split_type: the criterion to split a node (either rss, gini, gain_ratio)
         :param terminate: the termination criteria (defaults to leaf, can be 'pure' if classification)
         :param tree_type: the type of decision tree (classification or regression)
         """
@@ -66,6 +66,8 @@ class DecisionTree(object):
         elif self.__class__.__name__ == 'RegressionDecisionTree':
             if split_type == 'gini':
                 raise ValueError('Cannot have split_type=gini for class RegressionDecisionTree')
+            elif split_type == 'gain_ratio':
+                raise ValueError('Cannot have split_type=gain_ratio for class RegressionDecisionTree')
             if terminate == 'pure':
                 raise ValueError('Cannot have a pure termination for class RegressionDecisionTree')
         else:  # Will default to this is a ClassificationDecisionTree
@@ -113,10 +115,13 @@ class DecisionTree(object):
             if self.__split_type == 'rss':
                 split_col, val = self.__find_split__(curr_idx, np.min, np.argmin, self.__rss__)
                 # Set the split
-                self.__node_list[level][n].set_split(split_col, val)
-            else:
+            elif self.__split_type == 'gini':
                 split_col, val = self.__find_split__(curr_idx, np.max, np.argmax, self.__gini_impurity_gain__)
-                self.__node_list[level][n].set_split(split_col, val)
+            elif self.__split_type == 'gain_ratio':
+                split_col, val = self.__find_split__(curr_idx, np.max, np.argmax, self.__gain_ratio__)
+            else:
+                raise ValueError('Unknown split type defined')
+            self.__node_list[level][n].set_split(split_col, val)
             # Create new nodes
             lower_idx, upper_idx = self.__create_new_nodes__(level, n)
             # Call the function if necessary
@@ -219,7 +224,7 @@ class DecisionTree(object):
         :param curr_idx: The current 2-d index the function is calling to
         :param decision_func: np.min/np.max depending if rss vs. gini
         :param arg_func: np.argmin/np.argmax depending if rss vs. gini
-        :param criteria_func: either self.__rss__ or self.__gini_impurity_gain__
+        :param criteria_func: either self.__rss__, self.__gini_impurity_gain__, or self.__gain_ratio__
 
         :return: the split column/value
         """
@@ -274,6 +279,18 @@ class DecisionTree(object):
         _, counts = np.unique(y_data, return_counts=True)
         return 1 - np.sum((counts / np.sum(counts))**2)
 
+    @staticmethod
+    def __split_information__(x):
+        """
+        Calculate the gain ratio (-sum(|S_i|/|S| * log_2(|S_i|/|S|))
+
+        :param x: the specific x vector
+
+        :return: the split information for that variable
+        """
+        freq = np.bincount(x) / len(x)
+        return np.sum([-1 * i * np.log2(i) for i in freq if i > 0.0])
+
     def __gini_impurity_gain__(self, level, n, idx, split_val):
         """
         Calculates the gain in gini impurity for a specific region.
@@ -293,6 +310,21 @@ class DecisionTree(object):
         lower = self.__gini_impurity__(lower_y_data)*len(lower_y_data)
         upper = self.__gini_impurity__(upper_y_data)*len(upper_y_data)
         return curr - (lower + upper)
+
+    def __gain_ratio__(self, level, n, idx, split_val):
+        """
+        Calculates the gain ratio, which is equal to the (impurity gain)/(split information)
+        Should ONLY be used in classification problems.
+
+        :param level: The level in the dictionary to look at
+        :param n: The node index to calculate the rss for
+        :param idx: The column index in the matrix to calculate values for
+        :param split_val: The value to split on
+
+        :return: The gain ratio
+        """
+        x_data = self.__node_list[level][n].get_x_data()
+        return self.__gini_impurity_gain__(level, n, idx, split_val) / self.__split_information__(x_data[:, idx])
 
     def __terminate_fit__(self, curr_idx):
         """
@@ -525,6 +557,6 @@ class ClassificationDecisionTree(DecisionTree):
 
         :param leaf_terminate: the amount of collections needed to terminate the tree with a leaf (defaults to 1)
         :param terminate: the way to terminate the classification tree (leaf/pure)
-        :param split_type: the criteria to split on
+        :param split_type: the criteria to split on (gini/rss/gain_ratio)
         """
         super().__init__('classification', split_type, terminate=terminate, leaf_terminate=leaf_terminate)
