@@ -30,6 +30,7 @@ class DecisionTree(object):
         self.__ncols: The number of features within the given dataset.
         self.__type: classification or regression
         self.__split_type: type of splitting
+        self.__prune: prune
 
 
     Methods:
@@ -44,20 +45,27 @@ class DecisionTree(object):
         -------
         Node Class: A node class (see node class for explanation)
         __recursive_fit__: Fits a tree recursively by calculating a column to split on
-        __create_node__: Creates a new node, and designs if it's a leaf
+        __create_node__: Create a new node
+        __split_data__: Split the data between branches
         __create_new_nodes__: Create a set of new nodes by splitting
+        __find_split__: Find the optimal splitting point
         __rss__: Calculates the residual sum of squares to split regions
+        __gini_impurity__: Calculates the gini impurity
+        __split_information__: Calculates the split inforamtion to reduce continuous attributes
+        __gini_impurity_gain__: Calculate the gini impurity gain
+        __gain_ratio__: Calculate the gain ratio
         __terminate_fit__: Checks at a stage whether each leaf satisfies the terminating criteria
-        __recursive_predict__: Does the recurisive predictions at each point
+        __recursive_predict__: Does the recursive predictions at each point
     """
 
-    def __init__(self, tree_type, split_type, terminate='leaf', leaf_terminate=None):
+    def __init__(self, tree_type, split_type, terminate='leaf', leaf_terminate=None, prune=False):
         """
         Initialize the decision tree.
         :param tree_type: either classification or regression
         :param split_type: the criterion to split a node (either rss, gini, gain_ratio)
         :param terminate: the termination criteria (defaults to leaf, can be 'pure' if classification)
-        :param tree_type: the type of decision tree (classification or regression)
+        :param leaf_terminate: the type of decision tree (classification or regression)
+        :param prune: whether to use pessimistic pruning
         """
         # Check if this is a base class
         if self.__class__.__name__ == 'DecisionTree':
@@ -70,6 +78,8 @@ class DecisionTree(object):
                 raise ValueError('Cannot have split_type=gain_ratio for class RegressionDecisionTree')
             if terminate == 'pure':
                 raise ValueError('Cannot have a pure termination for class RegressionDecisionTree')
+            if prune:
+                raise ValueError('Cannot prune for class RegressionDecisionTree')
         else:  # Will default to this is a ClassificationDecisionTree
             if split_type == 'rss':
                 raise ValueError('Cannot have split_type=rss for class ClassificationDecisionTree')
@@ -86,6 +96,7 @@ class DecisionTree(object):
         self.__ncols = 0
         self.__type = tree_type
         self.__split_type = split_type
+        self.__prune = prune
 
     def fit(self, x_data, y_data):
         """
@@ -102,6 +113,10 @@ class DecisionTree(object):
         
         # Recursive fit
         self.__recursive_fit__([0, 0])
+
+        # Prune if necessary
+        if self.__prune:
+            self.__prune_tree__([0, 0])
         
     def __recursive_fit__(self, curr_idx):
         """
@@ -273,7 +288,6 @@ class DecisionTree(object):
         Calculate the gini impurity (1 - sum(p(i)^2)
 
         :param y_data: the y data
-
         :return: the impurity
         """
         _, counts = np.unique(y_data, return_counts=True)
@@ -282,10 +296,9 @@ class DecisionTree(object):
     @staticmethod
     def __split_information__(x):
         """
-        Calculate the gain ratio (-sum(|S_i|/|S| * log_2(|S_i|/|S|))
+        Calculate the split information (-sum(|S_i|/|S| * log_2(|S_i|/|S|))
 
         :param x: the specific x vector
-
         :return: the split information for that variable
         """
         freq = np.bincount(x) / len(x)
@@ -357,6 +370,52 @@ class DecisionTree(object):
             else:
                 new_idx = [curr_idx[0] + 1, self.__node_list[curr_idx[0]][curr_idx[1]].get_upper_split()]
             return self.__recursive_predict__(x_data, new_idx)
+
+    @staticmethod
+    def __expected_error__(y_data):
+        """
+        Calculate the expected error using a 95 percent CI, and approximating the result as a normal
+        approximation to a binomial distribution.
+
+        :param y_data: the y_data for this leaf
+        :return: the error from a 95 percent ci
+        """
+        # Get the bincount, and the error probability
+        freq = np.bincount(y_data) / len(y_data)
+        p = 1 - np.max(freq)
+        # Get the upper bound
+        return (p + 1.96 * np.sqrt((p * (1 - p)) / len(y_data)))*len(y_data)
+
+    def __prune_tree__(self, curr_idx):
+        """
+        Prune the tree using the expected error.  Will recursively iterate through parent nodes and prune
+        the tree if necessary.
+
+        :param curr_idx: The level and index of the current node
+        """
+        level, n = curr_idx[0], curr_idx[1]
+        # Check if leaf
+        if self.__node_list[level][n].is_leaf():
+            pass
+        else:
+            # Check whether to prune the upper and lower branches
+            lower_idx = [curr_idx[0] + 1, self.__node_list[curr_idx[0]][curr_idx[1]].get_lower_split()]
+            self.__prune_tree__(lower_idx)
+            upper_idx = [curr_idx[0] + 1, self.__node_list[curr_idx[0]][curr_idx[1]].get_upper_split()]
+            self.__prune_tree__(upper_idx)
+            # Check whether to prune this branch
+            curr_error = self.__expected_error__(self.__node_list[curr_idx[0]][curr_idx[1]].get_y_data())
+            lower_error = self.__expected_error__(self.__node_list[lower_idx[0]][lower_idx[1]].get_y_data())
+            upper_error = self.__expected_error__(self.__node_list[upper_idx[0]][upper_idx[1]].get_y_data())
+            # Test whether to prune
+            if curr_error < (lower_error + upper_error):
+                self.__node_list[curr_idx[0]][curr_idx[1]].prune()
+                self.__node_list[lower_idx[0]][lower_idx[1]] = None
+                self.__node_list[upper_idx[0]][upper_idx[1]] = None
+
+                # Delete list if no nodes are left
+                if set(self.__node_list[curr_idx[0] + 1]) == {None}:
+                    del self.__node_list[upper_idx[0]]
 
     def predict(self, x_data):
         """
@@ -444,6 +503,19 @@ class DecisionTree(object):
             :return: self.__leaf__ value
             """
             return self.__leaf
+
+        def prune(self):
+            """
+            Prunes the node by setting the splits to none and making a leaf and eliminating unnecessary vairables.
+            """
+            self.__leaf = True
+            temp_counter = Counter(self.__y_data)
+            self.__prediction = temp_counter.most_common(1)[0][0]
+            # Set other values to None
+            self.__lower_split = None
+            self.__upper_split = None
+            self.__col = None
+            self.__split = None
 
         def set_split(self, idx, val):
             """
@@ -551,12 +623,13 @@ class ClassificationDecisionTree(DecisionTree):
     NOTE: If there is a class tie, this module WILL PICK the lowest class.
     """
 
-    def __init__(self, split_type='gini', terminate='leaf', leaf_terminate=1):
+    def __init__(self, split_type='gini', terminate='leaf', leaf_terminate=1, prune=False):
         """
         Initialize the decision tree.
 
         :param leaf_terminate: the amount of collections needed to terminate the tree with a leaf (defaults to 1)
         :param terminate: the way to terminate the classification tree (leaf/pure)
         :param split_type: the criteria to split on (gini/rss/gain_ratio)
+        :param prune: whether we should use pessimistic pruning on the tree
         """
-        super().__init__('classification', split_type, terminate=terminate, leaf_terminate=leaf_terminate)
+        super().__init__('classification', split_type, terminate=terminate, leaf_terminate=leaf_terminate, prune=prune)

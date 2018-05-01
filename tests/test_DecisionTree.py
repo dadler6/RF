@@ -504,5 +504,57 @@ class TestClassificationDecisionTreePredict(unittest.TestCase):
         self.assertEqual(round(result_pred_3, 6), round(true_pred_3, 6))
 
 
+class TestClassificationDecisionTreePruning(unittest.TestCase):
+    """
+    Test whether a tree is correctly pruned.
+    """
+
+    def setUp(self):
+        """
+        Setup internal parameters used multiple times.
+        """
+        # Create decision with tree with a gain ratio
+        self.dt_w_prune = DT.ClassificationDecisionTree(
+            split_type='gain_ratio',
+            terminate='pure',
+            prune=True
+        )
+        self.dt_wo_prune = DT.ClassificationDecisionTree(
+            split_type='gain_ratio',
+            terminate='pure',
+            prune=False
+        )
+
+        # Make simple input data
+        x_data_1 = np.array([[1]] * 2 + [[2]] * 3)
+        y_data_1 = np.array([0, 1, 0, 1, 1])
+
+        # Train the data
+        self.dt_w_prune.fit(x_data_1, y_data_1)
+        self.dt_wo_prune.fit(x_data_1, y_data_1)
+
+    def test_extra_level(self):
+        """
+        Test that pruning reduces the levels of the trees.
+        """
+        # Get the result object
+        result_tree_w_pruning = self.dt_w_prune.get_tree()
+        result_tree_wo_pruning = self.dt_wo_prune.get_tree()
+
+        self.assertEqual(len(result_tree_w_pruning), 1)
+        self.assertEqual(len(result_tree_wo_pruning), 2)
+
+    def test_prediction_w_pruning(self):
+        """
+        Test the prediction with/without pruning.
+        """
+        test_x_data = np.array([[1]])
+        pred_w_pruning = self.dt_w_prune.predict(test_x_data)
+        pred_wo_pruning = self.dt_wo_prune.predict(test_x_data)
+
+        self.assertEqual(pred_w_pruning, 1)
+        self.assertEqual(pred_wo_pruning, 0)
+
+
 if __name__ == "__main__":
     unittest.main()
