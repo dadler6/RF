@@ -22,15 +22,15 @@ class DecisionTree(object):
     and the node holds a cutoff, and then reference to another node.  Nodes can also hold a terminating value.
 
     Parameters:
-        self.__leaf_terminate: The leaf terminating criteria (how many points to left in the data to create
+        cls.__leaf_terminate: The leaf terminating criteria (how many points to left in the data to create
                              a leaf node). Defaults to 1 or None (if termination criteria = 'leaf'.
-        self.__pure_terminate: True/False pending if the termination criteria is pure for classification trees
-        self.__node_list: A list of 2D nodes, where each section of the outer list is a level of the
+        cls.__pure_terminate: True/False pending if the termination criteria is pure for classification trees
+        cls.__node_list: A list of 2D nodes, where each section of the outer list is a level of the
                           tree, and then the lists within a level are the inidividual nodes at that level
-        self.__ncols: The number of features within the given dataset.
-        self.__type: classification or regression
-        self.__split_type: type of splitting
-        self.__prune: prune
+        cls.__ncols: The number of features within the given dataset.
+        cls.__type: classification or regression
+        cls.__split_func: function to split on
+        cls.__prune: prune
 
 
     Methods:
@@ -49,56 +49,22 @@ class DecisionTree(object):
         __split_data__: Split the data between branches
         __create_new_nodes__: Create a set of new nodes by splitting
         __find_split__: Find the optimal splitting point
-        __rss__: Calculates the residual sum of squares to split regions
-        __gini_impurity__: Calculates the gini impurity
-        __split_information__: Calculates the split inforamtion to reduce continuous attributes
-        __gini_impurity_gain__: Calculate the gini impurity gain
-        __gain_ratio__: Calculate the gain ratio
         __terminate_fit__: Checks at a stage whether each leaf satisfies the terminating criteria
         __recursive_predict__: Does the recursive predictions at each point
     """
 
-    def __init__(self, tree_type, split_type, terminate='leaf', leaf_terminate=None, prune=False):
-        """
-        Initialize the decision tree.
-        :param tree_type: either classification or regression
-        :param split_type: the criterion to split a node (either rss, gini, gain_ratio)
-        :param terminate: the termination criteria (defaults to leaf, can be 'pure' if classification)
-        :param leaf_terminate: the type of decision tree (classification or regression)
-        :param prune: whether to use pessimistic pruning
-        """
-        # Check if this is a base class
-        if self.__class__.__name__ == 'DecisionTree':
-            raise TypeError('Cannot instantiate base class DecisionTree')
-        # Check to make sure that split type is not 'gini' for regression
-        elif self.__class__.__name__ == 'RegressionDecisionTree':
-            if split_type == 'gini':
-                raise ValueError('Cannot have split_type=gini for class RegressionDecisionTree')
-            elif split_type == 'gain_ratio':
-                raise ValueError('Cannot have split_type=gain_ratio for class RegressionDecisionTree')
-            if terminate == 'pure':
-                raise ValueError('Cannot have a pure termination for class RegressionDecisionTree')
-            if prune:
-                raise ValueError('Cannot prune for class RegressionDecisionTree')
-        else:  # Will default to this is a ClassificationDecisionTree
-            if split_type == 'rss':
-                raise ValueError('Cannot have split_type=rss for class ClassificationDecisionTree')
-        # Check termination criteria
-        if terminate == 'leaf':
-            if (leaf_terminate is None) or leaf_terminate < 1:
-                raise ValueError('Cannot have non-positive termination criteria for terminate == "leaf"')
-            self.__leaf_terminate = leaf_terminate
-            self.__pure_terminate = False
-        else:
-            self.__leaf_terminate = None
-            self.__pure_terminate = True
-        self.__node_list = []
-        self.__ncols = 0
-        self.__type = tree_type
-        self.__split_type = split_type
-        self.__prune = prune
+    __leaf_terminate = None
+    __pure_terminate = None
+    __type = None
+    __prune = None
 
-    def fit(self, x_data, y_data):
+    # Parameters that can be initialized
+    __node_list = []
+    __ncols = 0
+    __split_func = None
+
+    @classmethod
+    def fit(cls, x_data, y_data):
         """
         Fit (train) the decision tree using an inputted dataset.
 
@@ -106,46 +72,39 @@ class DecisionTree(object):
         :param y_data: The result vector we are regressing on.
         """
         # Get number of columns
-        self.__ncols = x_data.shape[1]
+        cls.__ncols = x_data.shape[1]
 
         # Make initial node with all data
-        self.__node_list.append([self.__create_node__(x_data, y_data)])
+        cls.__node_list.append([cls.__create_node__(x_data, y_data)])
         
         # Recursive fit
-        self.__recursive_fit__([0, 0])
+        cls.__recursive_fit__([0, 0])
 
         # Prune if necessary
-        if self.__prune:
-            self.__prune_tree__([0, 0])
-        
-    def __recursive_fit__(self, curr_idx):
+        if cls.__prune:
+            cls.__prune_tree__([0, 0])
+
+    @classmethod
+    def __recursive_fit__(cls, curr_idx):
         """
         Recursively fit nodes while not satisfying the terminating criteria.
 
         :param curr_idx: The current 2-d index the function is calling to
         """
         level, n = curr_idx[0], curr_idx[1]
-        if not self.__terminate_fit__(curr_idx):
-            # Go through each column
-            if self.__split_type == 'rss':
-                split_col, val = self.__find_split__(curr_idx, np.min, np.argmin, self.__rss__)
-                # Set the split
-            elif self.__split_type == 'gini':
-                split_col, val = self.__find_split__(curr_idx, np.max, np.argmax, self.__gini_impurity_gain__)
-            elif self.__split_type == 'gain_ratio':
-                split_col, val = self.__find_split__(curr_idx, np.max, np.argmax, self.__gain_ratio__)
-            else:
-                raise ValueError('Unknown split type defined')
-            self.__node_list[level][n].set_split(split_col, val)
+        if not cls.__terminate_fit__(curr_idx):
+            split_col, val = cls.__find_split__(curr_idx, np.min, np.argmin, cls.__split_func)
+            cls.__node_list[level][n].set_split(split_col, val)
             # Create new nodes
-            lower_idx, upper_idx = self.__create_new_nodes__(level, n)
+            lower_idx, upper_idx = cls.__create_new_nodes__(level, n)
             # Call the function if necessary
             if lower_idx[1] is not None:
-                self.__recursive_fit__(lower_idx)
+                cls.__recursive_fit__(lower_idx)
             if upper_idx[1] is not None:
-                self.__recursive_fit__(upper_idx)
+                cls.__recursive_fit__(upper_idx)
 
-    def __create_node__(self, x_data, y_data):
+    @classmethod
+    def __create_node__(cls, x_data, y_data):
         """
         Creates new node and determines if it is a leaf node.
 
@@ -154,22 +113,23 @@ class DecisionTree(object):
         :return: The new node object
         """
         # Return if leaf
-        if self.__pure_terminate:
+        if cls.__pure_terminate:
             # Check y_data holds one unique value
             if len(np.unique(y_data)) > 1 and x_data.shape[0] > 1:
-                return self._Node(False, x_data, y_data)
+                return cls._Node(False, x_data, y_data)
         else:
             # Check leaf size
-            if x_data.shape[0] > self.__leaf_terminate:
-                return self._Node(False, x_data, y_data)
+            if x_data.shape[0] > cls.__leaf_terminate:
+                return cls._Node(False, x_data, y_data)
 
         # Return if branching node
-        if self.__type == 'classification':
-            return self._Node(True, x_data, y_data, 'classification')
+        if cls.__type == 'classification':
+            return cls._Node(True, x_data, y_data, 'classification')
         else:
-            return self._Node(True, x_data, y_data, 'regression')
+            return cls._Node(True, x_data, y_data, 'regression')
 
-    def __split_data__(self, level, n, idx, split_val):
+    @classmethod
+    def __split_data__(cls, level, n, idx, split_val):
         """
         Split the data based upon a value.
 
@@ -180,8 +140,8 @@ class DecisionTree(object):
 
         :return: the split
         """
-        x_data = self.__node_list[level][n].get_x_data()
-        y_data = self.__node_list[level][n].get_y_data()
+        x_data = cls.__node_list[level][n].get_x_data()
+        y_data = cls.__node_list[level][n].get_y_data()
 
         lower_x_data = x_data[x_data[:, idx] < split_val]
         lower_y_data = y_data[x_data[:, idx] < split_val]
@@ -190,7 +150,8 @@ class DecisionTree(object):
 
         return lower_x_data, lower_y_data, upper_x_data, upper_y_data
 
-    def __create_new_nodes__(self, level, n):
+    @classmethod
+    def __create_new_nodes__(cls, level, n):
         """
         Create the next level of nodes. Splits the data based upon the specified axis, and
         creates the new level of nodes by splitting the data.
@@ -200,14 +161,14 @@ class DecisionTree(object):
 
         :return: the upper and lower tuples for the new nodes created
         """
-        if (level + 1) == len(self.__node_list):
-            self.__node_list.append([])
+        if (level + 1) == len(cls.__node_list):
+            cls.__node_list.append([])
 
-        split_val = self.__node_list[level][n].get_split()
-        idx = self.__node_list[level][n].get_col()
+        split_val = cls.__node_list[level][n].get_split()
+        idx = cls.__node_list[level][n].get_col()
 
         # Split data
-        lower_x_data, lower_y_data, upper_x_data, upper_y_data = self.__split_data__(level, n, idx, split_val)
+        lower_x_data, lower_y_data, upper_x_data, upper_y_data = cls.__split_data__(level, n, idx, split_val)
 
         # Now check if all the same in lower/upper
         # Do not change y_data to average over all values
@@ -217,22 +178,23 @@ class DecisionTree(object):
             upper_x_data = upper_x_data[[0], :]
         # Make lower node if one can
         if lower_x_data.shape[0] > 0:
-            lower_curr_index = len(self.__node_list[level + 1])
-            self.__node_list[level + 1].append(self.__create_node__(lower_x_data, lower_y_data))
-            self.__node_list[level][n].set_lower_split_index(lower_curr_index)
+            lower_curr_index = len(cls.__node_list[level + 1])
+            cls.__node_list[level + 1].append(cls.__create_node__(lower_x_data, lower_y_data))
+            cls.__node_list[level][n].set_lower_split_index(lower_curr_index)
         else:
             lower_curr_index = None
         # Make upper node
         if upper_x_data.shape[0] > 0:
-            upper_curr_index = len(self.__node_list[level + 1])
-            self.__node_list[level + 1].append(self.__create_node__(upper_x_data, upper_y_data))
-            self.__node_list[level][n].set_upper_split_index(upper_curr_index)
+            upper_curr_index = len(cls.__node_list[level + 1])
+            cls.__node_list[level + 1].append(cls.__create_node__(upper_x_data, upper_y_data))
+            cls.__node_list[level][n].set_upper_split_index(upper_curr_index)
         else:
             upper_curr_index = None
 
         return [level + 1, lower_curr_index], [level + 1, upper_curr_index]
 
-    def __find_split__(self, curr_idx, decision_func, arg_func, criteria_func):
+    @classmethod
+    def __find_split__(cls, curr_idx, decision_func, arg_func, criteria_func):
         """
         Find split using the given criteria
 
@@ -244,10 +206,10 @@ class DecisionTree(object):
         :return: the split column/value
         """
         level, n = curr_idx[0], curr_idx[1]
-        x_data = self.__node_list[level][n].get_x_data()
+        x_data = cls.__node_list[level][n].get_x_data()
         col_min = []
         col_val = []
-        for i in range(self.__ncols):
+        for i in range(cls.__ncols):
             temp_desc = []
             temp_val = []
             temp_list = list(np.unique(x_data[:, i]))
@@ -268,89 +230,20 @@ class DecisionTree(object):
 
         return arg_func(col_min), col_val[arg_func(col_min)]
 
-    def __rss__(self, level, n, idx, split_val):
-        """
-        Calculates the residual sum of square errors for a specific region.
-
-        :param level: The level in the dictionary to look at
-        :param n: The node index to calculate the rss for
-        :param idx: The column index in the matrix to calculate values for
-        :param split_val: The value to split on
-
-        :return: The RSS
-        """
-        _, lower_y_data, _, upper_y_data = self.__split_data__(level, n, idx, split_val)
-        return np.sum((lower_y_data - np.mean(lower_y_data))**2) + np.sum((upper_y_data - np.mean(upper_y_data))**2)
-
-    @staticmethod
-    def __gini_impurity__(y_data):
-        """
-        Calculate the gini impurity (1 - sum(p(i)^2)
-
-        :param y_data: the y data
-        :return: the impurity
-        """
-        _, counts = np.unique(y_data, return_counts=True)
-        return 1 - np.sum((counts / np.sum(counts))**2)
-
-    @staticmethod
-    def __split_information__(x):
-        """
-        Calculate the split information (-sum(|S_i|/|S| * log_2(|S_i|/|S|))
-
-        :param x: the specific x vector
-        :return: the split information for that variable
-        """
-        freq = np.bincount(x) / len(x)
-        return np.sum([-1 * i * np.log2(i) for i in freq if i > 0.0])
-
-    def __gini_impurity_gain__(self, level, n, idx, split_val):
-        """
-        Calculates the gain in gini impurity for a specific region.
-        Should ONLY be used in classification problems.
-        Gain = Curr Gini * Size - sum_{new nodes}(new_gini * size)
-
-        :param level: The level in the dictionary to look at
-        :param n: The node index to calculate the rss for
-        :param idx: The column index in the matrix to calculate values for
-        :param split_val: The value to split on
-
-        :return: The gini impurity for this split
-        """
-        y_data = self.__node_list[level][n].get_y_data()
-        _, lower_y_data, _, upper_y_data = self.__split_data__(level, n, idx, split_val)
-        curr = self.__gini_impurity__(y_data)*len(y_data)
-        lower = self.__gini_impurity__(lower_y_data)*len(lower_y_data)
-        upper = self.__gini_impurity__(upper_y_data)*len(upper_y_data)
-        return curr - (lower + upper)
-
-    def __gain_ratio__(self, level, n, idx, split_val):
-        """
-        Calculates the gain ratio, which is equal to the (impurity gain)/(split information)
-        Should ONLY be used in classification problems.
-
-        :param level: The level in the dictionary to look at
-        :param n: The node index to calculate the rss for
-        :param idx: The column index in the matrix to calculate values for
-        :param split_val: The value to split on
-
-        :return: The gain ratio
-        """
-        x_data = self.__node_list[level][n].get_x_data()
-        return self.__gini_impurity_gain__(level, n, idx, split_val) / self.__split_information__(x_data[:, idx])
-
-    def __terminate_fit__(self, curr_idx):
+    @classmethod
+    def __terminate_fit__(cls, curr_idx):
         """
         Decide if fit is terminated.
 
         :param: The current 2D idx
         :return: True if terminated, False if not
         """
-        if self.__node_list[curr_idx[0]][curr_idx[1]].is_leaf():
+        if cls.__node_list[curr_idx[0]][curr_idx[1]].is_leaf():
             return True
         return False
 
-    def __recursive_predict__(self, x_data, curr_idx):
+    @classmethod
+    def __recursive_predict__(cls, x_data, curr_idx):
         """
         Follow the tree to get the correct prediction.
 
@@ -359,80 +252,43 @@ class DecisionTree(object):
         :return: The prediction
         """
         # Check if leaf
-        if self.__node_list[curr_idx[0]][curr_idx[1]].is_leaf():
-            return self.__node_list[curr_idx[0]][curr_idx[1]].get_prediction()
+        if cls.__node_list[curr_idx[0]][curr_idx[1]].is_leaf():
+            return cls.__node_list[curr_idx[0]][curr_idx[1]].get_prediction()
         else:
             # Figure out next leaf to look at
-            idx = self.__node_list[curr_idx[0]][curr_idx[1]].get_col()
-            split = self.__node_list[curr_idx[0]][curr_idx[1]].get_split()
+            idx = cls.__node_list[curr_idx[0]][curr_idx[1]].get_col()
+            split = cls.__node_list[curr_idx[0]][curr_idx[1]].get_split()
             if x_data[idx] < split:
-                new_idx = [curr_idx[0] + 1, self.__node_list[curr_idx[0]][curr_idx[1]].get_lower_split()]
+                new_idx = [curr_idx[0] + 1, cls.__node_list[curr_idx[0]][curr_idx[1]].get_lower_split()]
             else:
-                new_idx = [curr_idx[0] + 1, self.__node_list[curr_idx[0]][curr_idx[1]].get_upper_split()]
-            return self.__recursive_predict__(x_data, new_idx)
+                new_idx = [curr_idx[0] + 1, cls.__node_list[curr_idx[0]][curr_idx[1]].get_upper_split()]
+            return cls.__recursive_predict__(x_data, new_idx)
 
     @staticmethod
-    def __expected_error__(y_data):
+    def __prune_tree__(self):
         """
-        Calculate the expected error using a 95 percent CI, and approximating the result as a normal
-        approximation to a binomial distribution.
-
-        :param y_data: the y_data for this leaf
-        :return: the error from a 95 percent ci
+        Static method to be overwritten if a classification tree.
         """
-        # Get the bincount, and the error probability
-        freq = np.bincount(y_data) / len(y_data)
-        p = 1 - np.max(freq)
-        # Get the upper bound
-        return (p + 1.96 * np.sqrt((p * (1 - p)) / len(y_data)))*len(y_data)
+        pass
 
-    def __prune_tree__(self, curr_idx):
-        """
-        Prune the tree using the expected error.  Will recursively iterate through parent nodes and prune
-        the tree if necessary.
-
-        :param curr_idx: The level and index of the current node
-        """
-        level, n = curr_idx[0], curr_idx[1]
-        # Check if leaf
-        if self.__node_list[level][n].is_leaf():
-            pass
-        else:
-            # Check whether to prune the upper and lower branches
-            lower_idx = [curr_idx[0] + 1, self.__node_list[curr_idx[0]][curr_idx[1]].get_lower_split()]
-            self.__prune_tree__(lower_idx)
-            upper_idx = [curr_idx[0] + 1, self.__node_list[curr_idx[0]][curr_idx[1]].get_upper_split()]
-            self.__prune_tree__(upper_idx)
-            # Check whether to prune this branch
-            curr_error = self.__expected_error__(self.__node_list[curr_idx[0]][curr_idx[1]].get_y_data())
-            lower_error = self.__expected_error__(self.__node_list[lower_idx[0]][lower_idx[1]].get_y_data())
-            upper_error = self.__expected_error__(self.__node_list[upper_idx[0]][upper_idx[1]].get_y_data())
-            # Test whether to prune
-            if curr_error < (lower_error + upper_error):
-                self.__node_list[curr_idx[0]][curr_idx[1]].prune()
-                self.__node_list[lower_idx[0]][lower_idx[1]] = None
-                self.__node_list[upper_idx[0]][upper_idx[1]] = None
-
-                # Delete list if no nodes are left
-                if set(self.__node_list[curr_idx[0] + 1]) == {None}:
-                    del self.__node_list[upper_idx[0]]
-
-    def predict(self, x_data):
+    @classmethod
+    def predict(cls, x_data):
         """
         Predict a class using the dataset given.
 
         :param x_data: The dataset to predict
         :return: A vector of predictions for each row in X.
         """
-        return self.__recursive_predict__(x_data, [0, 0])
+        return cls.__recursive_predict__(x_data, [0, 0])
 
-    def get_tree(self):
+    @classmethod
+    def get_tree(cls):
         """
         Get the underlying tree object.
 
         :return: The tree (self.__node_list())
         """
-        return self.__node_list
+        return cls.__node_list
 
     class _Node(object):
         """
@@ -604,16 +460,49 @@ class DecisionTree(object):
 class RegressionDecisionTree(DecisionTree):
     """
     Regression Decision tree class.  Will inherit the decision tree class.
+
+
+    Methods:
+        Public
+        ------
+        Initialization: Initializes the class
+
+        Private
+        -------
+        __rss__: Calculates residual sum of squared error.
+
     """
 
     def __init__(self, split_type='rss', leaf_terminate=1):
         """
-        Initialize the decision tree superclass.
-
-        :param leaf_terminate: the amount of collections needed to terminate the tree with a leaf (defaults to 1)
-        :param split_type: the criteria to split on
+        Initialize the decision tree.
+        :param split_type: the criterion to split a node (either rss, gini, gain_ratio)
+        :param leaf_terminate: the type of decision tree (classification or regression)
         """
-        super().__init__('regression', split_type, terminate='leaf', leaf_terminate=leaf_terminate)
+        # Intialize super class
+        self.__split_func = self.__rss__
+
+        # Intialize parameters
+        self.__leaf_terminate = leaf_terminate
+        self.__pure_terminate = False
+        self.__type = 'regression'
+        self.__split_type = split_type
+        self.__prune = False
+        super(RegressionDecisionTree, self).__init__()
+
+    def __rss__(self, level, n, idx, split_val):
+        """
+        Calculates the residual sum of square errors for a specific region.
+
+        :param level: The level in the dictionary to look at
+        :param n: The node index to calculate the rss for
+        :param idx: The column index in the matrix to calculate values for
+        :param split_val: The value to split on
+
+        :return: The RSS
+        """
+        _, lower_y_data, _, upper_y_data = self.__split_data__(level, n, idx, split_val)
+        return np.sum((lower_y_data - np.mean(lower_y_data))**2) + np.sum((upper_y_data - np.mean(upper_y_data))**2)
 
 
 class ClassificationDecisionTree(DecisionTree):
@@ -621,6 +510,18 @@ class ClassificationDecisionTree(DecisionTree):
     Classification Decision tree class.  Will inherit the decision tree class.
 
     NOTE: If there is a class tie, this module WILL PICK the lowest class.
+
+    Methods:
+        Public
+        ------
+        Initialization: Initializes the class
+
+        Private
+        -------
+        __gini_impurity__: Calculates the gini impurity
+        __split_information__: Calculates the split inforamtion to reduce continuous attributes
+        __gini_impurity_gain__: Calculate the gini impurity gain
+        __gain_ratio__: Calculate the gain ratio
     """
 
     def __init__(self, split_type='gini', terminate='leaf', leaf_terminate=1, prune=False):
@@ -632,4 +533,126 @@ class ClassificationDecisionTree(DecisionTree):
         :param split_type: the criteria to split on (gini/rss/gain_ratio)
         :param prune: whether we should use pessimistic pruning on the tree
         """
-        super().__init__('classification', split_type, terminate=terminate, leaf_terminate=leaf_terminate, prune=prune)
+        # Initialize the split function
+        if split_type == 'gain_ratio':
+            self.__split_func = self.__gain_ratio__
+        else:
+            self.__split_func = self.__gini_impurity_gain__
+
+        # Initialize termination criteria
+        if terminate == 'leaf':
+            if (leaf_terminate is None) or leaf_terminate < 1:
+                raise ValueError('Cannot have non-positive termination criteria for terminate == "leaf"')
+            self.__leaf_terminate = leaf_terminate
+            self.__pure_terminate = False
+        else:
+            self.__leaf_terminate = None
+            self.__pure_terminate = True
+
+        self.__split_type = split_type
+        self.__prune = prune
+        self.__type = 'classification'
+        super(ClassificationDecisionTree, self).__init__()
+
+    @staticmethod
+    def __gini_impurity__(y_data):
+        """
+        Calculate the gini impurity (1 - sum(p(i)^2)
+
+        :param y_data: the y data
+        :return: the impurity
+        """
+        _, counts = np.unique(y_data, return_counts=True)
+        return 1 - np.sum((counts / np.sum(counts))**2)
+
+    @staticmethod
+    def __split_information__(x):
+        """
+        Calculate the split information (-sum(|S_i|/|S| * log_2(|S_i|/|S|))
+
+        :param x: the specific x vector
+        :return: the split information for that variable
+        """
+        freq = np.bincount(x) / len(x)
+        return np.sum([-1 * i * np.log2(i) for i in freq if i > 0.0])
+
+    def __gini_impurity_gain__(self, level, n, idx, split_val):
+        """
+        Calculates the gain in gini impurity for a specific region.
+        Should ONLY be used in classification problems.
+        Gain = Curr Gini * Size - sum_{new nodes}(new_gini * size)
+
+        :param level: The level in the dictionary to look at
+        :param n: The node index to calculate the rss for
+        :param idx: The column index in the matrix to calculate values for
+        :param split_val: The value to split on
+
+        :return: The gini impurity for this split
+        """
+        y_data = self.__node_list[level][n].get_y_data()
+        _, lower_y_data, _, upper_y_data = self.__split_data__(level, n, idx, split_val)
+        curr = self.__gini_impurity__(y_data)*len(y_data)
+        lower = self.__gini_impurity__(lower_y_data)*len(lower_y_data)
+        upper = self.__gini_impurity__(upper_y_data)*len(upper_y_data)
+        return curr - (lower + upper)
+
+    def __gain_ratio__(self, level, n, idx, split_val):
+        """
+        Calculates the gain ratio, which is equal to the (impurity gain)/(split information)
+        Should ONLY be used in classification problems.
+
+        :param level: The level in the dictionary to look at
+        :param n: The node index to calculate the rss for
+        :param idx: The column index in the matrix to calculate values for
+        :param split_val: The value to split on
+
+        :return: The gain ratio
+        """
+        x_data = self.__node_list[level][n].get_x_data()
+        return self.__gini_impurity_gain__(level, n, idx, split_val) / self.__split_information__(x_data[:, idx])
+
+    @staticmethod
+    def __expected_error__(y_data):
+        """
+        Calculate the expected error using a 95 percent CI, and approximating the result as a normal
+        approximation to a binomial distribution.
+
+        :param y_data: the y_data for this leaf
+        :return: the error from a 95 percent ci
+        """
+        # Get the bincount, and the error probability
+        freq = np.bincount(y_data) / len(y_data)
+        p = 1 - np.max(freq)
+        # Get the upper bound
+        return (p + 1.96 * np.sqrt((p * (1 - p)) / len(y_data))) * len(y_data)
+
+    def __prune_tree__(self, curr_idx):
+        """
+        Prune the tree using the expected error.  Will recursively iterate through parent nodes and prune
+        the tree if necessary.
+
+        :param curr_idx: The level and index of the current node
+        """
+        level, n = curr_idx[0], curr_idx[1]
+        # Check if leaf
+        if self.__node_list[level][n].is_leaf():
+            pass
+        else:
+            # Check whether to prune the upper and lower branches
+            lower_idx = [curr_idx[0] + 1, self.__node_list[curr_idx[0]][curr_idx[1]].get_lower_split()]
+            self.__prune_tree__(lower_idx)
+            upper_idx = [curr_idx[0] + 1, self.__node_list[curr_idx[0]][curr_idx[1]].get_upper_split()]
+            self.__prune_tree__(upper_idx)
+            # Check whether to prune this branch
+            curr_error = self.__expected_error__(self.__node_list[curr_idx[0]][curr_idx[1]].get_y_data())
+            lower_error = self.__expected_error__(self.__node_list[lower_idx[0]][lower_idx[1]].get_y_data())
+            upper_error = self.__expected_error__(self.__node_list[upper_idx[0]][upper_idx[1]].get_y_data())
+            # Test whether to prune
+            if curr_error < (lower_error + upper_error):
+                self.__node_list[curr_idx[0]][curr_idx[1]].prune()
+                self.__node_list[lower_idx[0]][lower_idx[1]] = None
+                self.__node_list[upper_idx[0]][upper_idx[1]] = None
+
+                # Delete list if no nodes are left
+                if set(self.__node_list[curr_idx[0] + 1]) == {None}:
+                    del self.__node_list[upper_idx[0]]
