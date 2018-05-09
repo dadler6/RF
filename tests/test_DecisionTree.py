@@ -373,7 +373,7 @@ class TestClassificationDecisionTreeFitGain(unittest.TestCase):
 
     def test_gain_ratio_axis(self):
         """
-        Test the gain ratio picks the less varied axis more time than the original.
+        Test the gain ratio picks the less varied axis more times than the original.
         """
         split_axis_1 = []
         for level in self.result_tree_1:
