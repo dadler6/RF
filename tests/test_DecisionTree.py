@@ -14,6 +14,7 @@ numpy
 # Imports
 from collections import Counter
 import numpy as np
+import pandas as pd
 import unittest
 import sys
 
@@ -161,12 +162,12 @@ class TestRegressionDecisionTreePredict(unittest.TestCase):
         # Should work for one leaf
         test_x_data_1 = np.array([1, 4])
         result_pred_1 = self.dt_1.predict(test_x_data_1)
-        true_pred_1 = 5.33333333333
-        self.assertEqual(round(result_pred_1, 6), round(true_pred_1, 6))
+        true_pred_1 = np.array([5.33333333333])
+        self.assertEqual(np.round(result_pred_1, 6), np.round(true_pred_1, 6))
 
         # Should also work with two leaves (since [1, 4] appears three times
         result_pred_2 = self.dt_2.predict(test_x_data_1)
-        self.assertEqual(round(result_pred_2, 6), round(true_pred_1, 6))
+        self.assertEqual(np.round(result_pred_2, 6), np.round(true_pred_1, 6))
 
     def test_fit_2(self):
         """
@@ -176,13 +177,13 @@ class TestRegressionDecisionTreePredict(unittest.TestCase):
         # Tree with one leaf
         test_x_data_2 = np.array([3, 1])
         result_pred_1 = self.dt_1.predict(test_x_data_2)
-        true_pred_1 = 4
-        self.assertEqual(round(result_pred_1, 6), round(true_pred_1, 6))
+        true_pred_1 = np.array([4])
+        self.assertEqual(np.round(result_pred_1, 6), np.round(true_pred_1, 6))
 
         # Tree with two leaves
         result_pred_2 = self.dt_2.predict(test_x_data_2)
-        true_pred_2 = 2.5
-        self.assertEqual(round(result_pred_2, 6), round(true_pred_2, 6))
+        true_pred_2 = np.array([2.5])
+        self.assertEqual(np.round(result_pred_2, 6), np.round(true_pred_2, 6))
 
     def test_fit_3(self):
         """
@@ -191,13 +192,13 @@ class TestRegressionDecisionTreePredict(unittest.TestCase):
         # Tree with one leaf
         test_x_data_3 = np.array([7, 4])
         result_pred_1 = self.dt_1.predict(test_x_data_3)
-        true_pred_1 = 0.0
-        self.assertEqual(round(result_pred_1, 6), round(true_pred_1, 6))
+        true_pred_1 = np.array([0.0])
+        self.assertEqual(np.round(result_pred_1, 6), np.round(true_pred_1, 6))
 
         # Tree with two leaves
         result_pred_2 = self.dt_2.predict(test_x_data_3)
-        true_pred_2 = 0.0
-        self.assertEqual(round(result_pred_2, 6), round(true_pred_2, 6))
+        true_pred_2 = np.array([0.0])
+        self.assertEqual(np.round(result_pred_2, 6), np.round(true_pred_2, 6))
 
 
 class TestClassificationDecisionTreeFit(unittest.TestCase):
@@ -451,16 +452,16 @@ class TestClassificationDecisionTreePredict(unittest.TestCase):
         # Should work for one leaf
         test_x_data_1 = np.array([1, 4])
         result_pred_1 = self.dt_1.predict(test_x_data_1)
-        true_pred_1 = 1
-        self.assertEqual(round(result_pred_1, 6), round(true_pred_1, 6))
+        true_pred_1 = np.array([1])
+        self.assertEqual(np.round(result_pred_1, 6), np.round(true_pred_1, 6))
 
         # Should also work with two leaves (since [1, 4] appears three times
         result_pred_2 = self.dt_2.predict(test_x_data_1)
-        self.assertEqual(round(result_pred_2, 6), round(true_pred_1, 6))
+        self.assertEqual(np.round(result_pred_2, 6), np.round(true_pred_1, 6))
 
         # [1, 4] should pick majority class which 1
         result_pred_3 = self.dt_3_pure.predict(test_x_data_1)
-        self.assertEqual(round(result_pred_3, 6), round(true_pred_1, 6))
+        self.assertEqual(np.round(result_pred_3, 6), np.round(true_pred_1, 6))
 
     def test_fit_2(self):
         """
@@ -470,18 +471,18 @@ class TestClassificationDecisionTreePredict(unittest.TestCase):
         # Tree with one leaf
         test_x_data_2 = np.array([3, 1])
         result_pred_1 = self.dt_1.predict(test_x_data_2)
-        true_pred_1 = 0
-        self.assertEqual(round(result_pred_1, 6), round(true_pred_1, 6))
+        true_pred_1 = np.array([0])
+        self.assertEqual(np.round(result_pred_1, 6), np.round(true_pred_1, 6))
 
         # Tree with two leaves
         result_pred_2 = self.dt_2.predict(test_x_data_2)
-        true_pred_2 = 0
-        self.assertEqual(round(result_pred_2, 6), round(true_pred_2, 6))
+        true_pred_2 = np.array([0])
+        self.assertEqual(np.round(result_pred_2, 6), np.round(true_pred_2, 6))
 
         # Tree with pure pruning
         result_pred_3 = self.dt_3_pure.predict(test_x_data_2)
-        true_pred_3 = 0
-        self.assertEqual(round(result_pred_3, 6), round(true_pred_3, 6))
+        true_pred_3 = np.array([0])
+        self.assertEqual(np.round(result_pred_3, 6), np.round(true_pred_3, 6))
 
     def test_fit_3(self):
         """
@@ -490,18 +491,18 @@ class TestClassificationDecisionTreePredict(unittest.TestCase):
         # Tree with one leaf
         test_x_data_3 = np.array([7, 4])
         result_pred_1 = self.dt_1.predict(test_x_data_3)
-        true_pred_1 = 1.0
-        self.assertEqual(round(result_pred_1, 6), round(true_pred_1, 6))
+        true_pred_1 = np.array([1.0])
+        self.assertEqual(np.round(result_pred_1, 6), np.round(true_pred_1, 6))
 
         # Tree with two leaves
         result_pred_2 = self.dt_2.predict(test_x_data_3)
-        true_pred_2 = 1.0
-        self.assertEqual(round(result_pred_2, 6), round(true_pred_2, 6))
+        true_pred_2 = np.array([1.0])
+        self.assertEqual(np.round(result_pred_2, 6), np.round(true_pred_2, 6))
 
         # Tree with two leaves
         result_pred_3 = self.dt_3_pure.predict(test_x_data_3)
-        true_pred_3 = 1.0
-        self.assertEqual(round(result_pred_3, 6), round(true_pred_3, 6))
+        true_pred_3 = np.array([1.0])
+        self.assertEqual(np.round(result_pred_3, 6), np.round(true_pred_3, 6))
 
 
 class TestClassificationDecisionTreePruning(unittest.TestCase):
@@ -554,6 +555,87 @@ class TestClassificationDecisionTreePruning(unittest.TestCase):
 
         self.assertEqual(pred_w_pruning, 1)
         self.assertEqual(pred_wo_pruning, 0)
+
+
+class TestDataIntake(unittest.TestCase):
+    """
+    Test that different data formats produce the same answer.
+    """
+
+    def setUp(self):
+        # Setup x data for both cases
+        x_data_train = np.array([
+            [1, 4],
+            [6, 7],
+            [1, 4],
+            [2, 3],
+            [4, 5],
+            [1, 5],
+            [3, 6],
+            [1, 4],
+            [3, 1],
+            [8, 9]
+        ])
+        x_data_test = np.array([
+            [1, 4],
+            [3, 1],
+            [7, 4]
+        ])
+
+        self.x_df_train = pd.DataFrame(x_data_train)
+        self.x_matrix_train = np.asmatrix(x_data_train)
+
+        self.x_df_test = pd.DataFrame(x_data_test)
+        self.x_matrix_test = np.asmatrix(x_data_test)
+
+    def test_data_intake_classification(self):
+        """
+        Test the classification can intake the data in different formats and predict same result.
+        """
+        # Setup y data
+        y_data_train = np.array([0, 1, 1, 0, 1, 0, 1, 1, 0, 1])
+        y_data_true = np.array([1, 0, 1])
+
+        y_series_train = pd.Series(y_data_train)
+        y_matrix_train = np.asmatrix(y_data_train)
+
+        # Classification tree
+        class_tree = DT.ClassificationDecisionTree(
+            split_type='gini',
+            terminate='leaf',
+            leaf_terminate=1
+        )
+
+        # Test different inputs and assertions
+        class_tree.fit(self.x_df_train, y_series_train)
+        self.assertEqual(list(class_tree.predict(self.x_df_test)), list(y_data_true))
+
+        class_tree.fit(self.x_matrix_train, y_matrix_train)
+        self.assertEqual(list(class_tree.predict(self.x_matrix_test)), list(y_data_true))
+
+    def test_data_intake_regression(self):
+        """
+        Test the regression can intake the data in different formats and predict same result.
+        """
+        # Setup y data
+        y_data_train = np.array([5, 6, 5, 1, 6, 7, 8, 6, 4, 0])
+        y_data_true = np.array([5.3333333, 4, 0])
+
+        y_series_train = pd.Series(y_data_train)
+        y_matrix_train = np.asmatrix(y_data_train)
+
+        # Regression tree
+        regress_tree = DT.RegressionDecisionTree(
+            split_type='rss',
+            leaf_terminate=1
+        )
+
+        # Test different inputs and assertions
+        regress_tree.fit(self.x_df_train, y_series_train)
+        self.assertEqual(list(np.round(regress_tree.predict(self.x_df_test), 6)), list(np.round(y_data_true, 6)))
+
+        regress_tree.fit(self.x_matrix_train, y_matrix_train)
+        self.assertEqual(list(np.round(regress_tree.predict(self.x_matrix_test), 6)), list(np.round(y_data_true, 6)))
 
 
 if __name__ == "__main__":
