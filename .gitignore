@@ -6,3 +6,4 @@ appengine-generated/
 
 # Background files for notebooks
 .DS_Store
+.ipynb_checkpoints/
