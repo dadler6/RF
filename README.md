@@ -9,7 +9,7 @@ The code for the random forest implementation
 **examples**
 Examples of running the various files in src.
 
-* [DecisionTreeClassification\_Examples.ipynb](https://github.com/dadler6/RF/blob/master/examples/DecisionTreeClassfication_Examples.ipynb): An example of using the iris dataset from sklearn to make a decision tree clasifier using the DecisionTree.py code.
+* [DecisionTreeClassification\_Examples.ipynb](https://github.com/dadler6/RF/blob/master/examples/DecisionTreeClassification_Examples.ipynb): An example of using the iris dataset from sklearn to make a decision tree clasifier using the DecisionTree.py code.
 
 **data**
 Data for the various test cases I'm developing.
