@@ -635,7 +635,8 @@ class ClassificationDecisionTree(_DecisionTree):
         :param x: the specific x vector
         :return: the split information for that variable
         """
-        freq = np.bincount(x) / len(x)
+        c = Counter(x)
+        freq = np.array([v for k, v in sorted(c.items())]) / len(x)
         return np.sum([-1 * i * np.log2(i) for i in freq if i > 0.0])
 
     def _gini_impurity_gain(self, level, n, idx, split_val):

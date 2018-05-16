@@ -4,10 +4,12 @@ This is my own implementation of a random forest, purely for learning purposes. 
 **src**
 The code for the random forest implementation
 
-* DecisionTree.py: Implementation of a decision tree.
+* [DecisionTree.py](https://github.com/dadler6/RF/blob/master/src/DecisionTree.py): Implementation of a decision tree.
 
 **examples**
 Examples of running the various files in src.
+
+* [DecisionTreeClassification\_Examples.ipynb](https://github.com/dadler6/RF/blob/master/examples/DecisionTreeClassfication_Examples.ipynb): An example of using the iris dataset from sklearn to make a decision tree clasifier using the DecisionTree.py code.
 
 **data**
 Data for the various test cases I'm developing.
@@ -15,7 +17,7 @@ Data for the various test cases I'm developing.
 **tests**
 Test cases of the src code.
 
-* test\_DecisionTree.py: Tests for the DecisionTree.py implementation.
+* [test\_DecisionTree.py](https://github.com/dadler6/RF/blob/master/tests/test_DecisionTree.py): Tests for the DecisionTree.py implementation.
 
 ## Implementation Notes
 
