@@ -9,6 +9,7 @@ Self-implementation of a decision tree.
 
 Package requirements:
 numpy
+pandas
 """
 
 # Imports
@@ -58,9 +59,18 @@ class _DecisionTree(object):
         __terminate_fit: Checks at a stage whether each leaf satisfies the terminating criteria
         _recursive_predict: Does the recursive predictions at each point
         _prune_tree: Abstract method not defined until later
-
     """
     def __init__(self, tree_type, split_func, leaf_terminate, pure_terminate, prune, split_criteria):
+        """
+        Initialize all parameters
+
+        :param tree_type: classification vs. regression
+        :param split_func: the function to tabulate error
+        :param leaf_terminate: If a number, how many samples must be in a leaf to terminate
+        :param pure_terminate: True/False, saying if one should terminate in classification if all classes are equal
+        :param prune: Whether to use pessimistic pruning
+        :param split_criteria: (np.min/np.max, np.argmin/np.argmax)
+        """
         # Initialize all parameters
         self._type = tree_type
         self._split_func = split_func
