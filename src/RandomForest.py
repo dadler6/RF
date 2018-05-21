@@ -15,8 +15,7 @@ DecisionTree.py (self implementation)
 
 # Imports
 import numpy as np
-import pandas as pd
-import DecisionTree
+import DecisionTree as DT
 
 
 class RandomForest(object):
@@ -57,6 +56,7 @@ class RandomForest(object):
         self._leaf_terminate = leaf_terminate
         self._oob = oob
         self._trees = []
+        self._oob_errors = []
 
     def fit(self, x_data, y_data):
         """
@@ -65,7 +65,14 @@ class RandomForest(object):
         :param x_data: The dataset to train the decision tree with.
         :param y_data: The result vector we are regressing on.
         """
-        pass
+        # Make the number of trees determinate by self._num_trees
+        for i in range(self._num_trees):
+            # Get tree
+            x_in, y_in, x_out, y_out = self.__get_sample(x_data, y_data)
+            cdt = self.__get_tree(x_in, y_in)
+            # Calculate oob if necessary
+            if self._oob:
+                self._oob_errors.append(self.__calculate_oob_error(cdt, x_out, y_out))
 
     def __get_sample(self, x, y):
         """
@@ -75,6 +82,7 @@ class RandomForest(object):
         :param y: The y data to sample from
         :return: The sampled x data, y data and the out of sample x data/y data
         """
+        # Take the random sample
         idx = np.random.choice(np.arange(len(y)), size=np.floor(self._samp_size * len(y)), replace=True)
         mask = np.ones(len(y), dtype=bool)
         mask[idx] = False
@@ -85,21 +93,31 @@ class RandomForest(object):
 
         return x_in, y_in, x_out, y_out
 
-    def __get_trees(self):
+    def __get_tree(self, x, y):
         """
-        Create decision trees based upon self._num_trees.
-        """
-        pass
+        Create a decision tree based upon self._num_trees.
 
-    def __calculate_oob_error(self):
+        :param x: The x data to fit to (input)
+        :paray y: The y data to fit to (target)
+        :return: A new CDT
         """
-        Calculate the oob error for a tree.
-        """
+        dt = DT.ClassificationDecisionTree(self._split_type, self._terminate,  self._leaf_terminate, prune=False)
+        dt.fit(x, y)
+        return dt
 
-    def __fit_trees(self):
+    @staticmethod
+    def __calculate_oob_error(self, cdt, x_out, y_out):
         """
-        Fit all the trees by sampling and then fitting.
+        Calculate the oob error for a tree by predicting on the out of bag sample.
+
+        :param cdt: The fit decision tree
+        :param x_out: The out of bag input
+        :param y_out: THe out of bad target
         """
+        y_pred = cdt.predict(x_out)
+        return (np.mean(y_out) - np.mean(y_pred))**2
+
+    def get_oob_error(self):
         pass
 
     def predict(self, x_data):
