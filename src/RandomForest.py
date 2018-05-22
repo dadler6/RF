@@ -16,6 +16,7 @@ DecisionTree.py (self implementation)
 # Imports
 import numpy as np
 import DecisionTree as DT
+from collections import Counter
 
 
 class RandomForest(object):
@@ -25,19 +26,45 @@ class RandomForest(object):
     Abstraction is made using the private (_) to not be able to implement outside.
 
     Parameters:
+    self._samp_size: Size of sample to take for fitting tree
+    self._num_trees: The number of trees to create
+    self._num_features: The number of features to use per tree (defaults to None which uses all features)
+    self._split_type: whether to use gini vs. gain ratio etc
+    self._terminate: The termination criteria (pure/not)
+    self._leaf_terminate: The number of samples in a leaf (not used if self._teriminate = pure)
+    self._oob_flag: The flag to calculate the oob error
+    self._trees: The list of trees
+    self._cols_used: The columns used to fit a tree
+    self._oob_errors: The oob error per tree
 
 
     Methods:
         Public
         ------
         Initialization: Initializes the class
+        fit: Fit the x data and y data
+        get_oob_error: Get the out of bag error
+        predict: Predict the values for a new dataset
 
 
         Private
         -------
+        __check_feature_size: Checks to make sure feature size is less than proposed number of features
+        __get_sample: Take a random sample of the x/y data to produce a train/out of bad set
+        __get_tree: Creates a new classification decision tree
+        __calculate_oob_error: Calculates the out of back error for a specific sample
     """
 
-    def __init__(self, samp_size=None, num_trees=10, split_type='gini', terminate='leaf', leaf_terminate=1, oob=False):
+    def __init__(
+            self,
+            samp_size=0.5,
+            num_trees=10,
+            num_features=None,
+            split_type='gini',
+            terminate='leaf',
+            leaf_terminate=1,
+            oob=False
+    ):
         """
         Initialize the RandomForest class.
 
@@ -51,11 +78,13 @@ class RandomForest(object):
         # Set parameters
         self._samp_size = samp_size
         self._num_trees = num_trees
+        self._num_features = num_features
         self._split_type = split_type
         self._terminate = terminate
         self._leaf_terminate = leaf_terminate
-        self._oob = oob
+        self._oob_flag = oob
         self._trees = []
+        self._cols_used = []
         self._oob_errors = []
 
     def fit(self, x_data, y_data):
@@ -65,18 +94,32 @@ class RandomForest(object):
         :param x_data: The dataset to train the decision tree with.
         :param y_data: The result vector we are regressing on.
         """
+        # Check feature size
         # Make the number of trees determinate by self._num_trees
         for i in range(self._num_trees):
             # Get tree
             x_in, y_in, x_out, y_out = self.__get_sample(x_data, y_data)
             cdt = self.__get_tree(x_in, y_in)
             # Calculate oob if necessary
-            if self._oob:
+            if self._oob_flag:
                 self._oob_errors.append(self.__calculate_oob_error(cdt, x_out, y_out))
+
+    def __check_feature_size(self, x_data):
+        """
+        Check to make sure the feature size is <= x_data. If self._num_features is none, will set
+        self._num_features to x_data
+
+        :param x_data: The x_data matrix to fit to
+        """
+        # Check if self._num_features is none, if so set to shape
+        if self._num_features is None:
+            self._num_features = x_data.shape[1]
+        if self._num_features > x_data.shape[1]:
+            raise ValueError('Number of features is greater than given X features.')
 
     def __get_sample(self, x, y):
         """
-        Get a sample from two indices.
+        Get a sample from two indices.  Will also sample num features if necessary
 
         :param x: The x data to sample from
         :param y: The y data to sample from
@@ -84,11 +127,16 @@ class RandomForest(object):
         """
         # Take the random sample
         idx = np.random.choice(np.arange(len(y)), size=np.floor(self._samp_size * len(y)), replace=True)
+        # Sample features
+        cols = np.random.choice(np.arange(x.shape[1]), size=self._num_features, replace=False)
+        self._cols_used.append(cols)
+
+        # Get the sample splits
         mask = np.ones(len(y), dtype=bool)
         mask[idx] = False
-        x_in = x[idx, :]
+        x_in = x[idx, cols]
         y_in = y[idx]
-        x_out = x[mask, :]
+        x_out = x[mask, cols]
         y_out = y[mask]
 
         return x_in, y_in, x_out, y_out
@@ -106,7 +154,7 @@ class RandomForest(object):
         return dt
 
     @staticmethod
-    def __calculate_oob_error(self, cdt, x_out, y_out):
+    def __calculate_oob_error(cdt, x_out, y_out):
         """
         Calculate the oob error for a tree by predicting on the out of bag sample.
 
@@ -118,12 +166,18 @@ class RandomForest(object):
         return (np.mean(y_out) - np.mean(y_pred))**2
 
     def get_oob_error(self):
-        pass
+        return np.mean(self._oob_errors)
 
     def predict(self, x_data):
         """
         Predict the y (target) for this x_data
+
         :param x_data: The daata to predict off of
         :return: The predicted target data (y)
         """
-        pass
+        preds = []
+        # Predict on each tree
+        for i in range(len(self._trees)):
+            preds.append(self._trees[i].predict(x_data[:, self._cols_used[i]]))
+        pred = np.column_stack(preds)
+        return np.array([Counter(pred[i, :]).most_common(1)[0] for i in range(pred.shape[0])])
