@@ -126,9 +126,9 @@ class RandomForest(object):
         :return: The sampled x data, y data and the out of sample x data/y data
         """
         # Take the random sample
-        idx = np.random.choice(np.arange(len(y)), size=np.floor(self._samp_size * len(y)), replace=True)
+        idx = np.random.choice(len(y), size=int(np.floor(self._samp_size * len(y))), replace=True)
         # Sample features
-        cols = np.random.choice(np.arange(x.shape[1]), size=self._num_features, replace=False)
+        cols = np.random.choice(x.shape[1], size=self._num_features, replace=False)
         self._cols_used.append(cols)
 
         # Get the sample splits
@@ -181,3 +181,11 @@ class RandomForest(object):
             preds.append(self._trees[i].predict(x_data[:, self._cols_used[i]]))
         pred = np.column_stack(preds)
         return np.array([Counter(pred[i, :]).most_common(1)[0] for i in range(pred.shape[0])])
+
+    def get_trees(self):
+        """
+        Get the list of trees.
+
+        :return: The list of trees.
+        """
+        return self._trees
