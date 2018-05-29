@@ -94,6 +94,8 @@ class RandomForest(object):
         :param x_data: The dataset to train the decision tree with.
         :param y_data: The result vector we are regressing on.
         """
+        # handle the data
+        x_data, y_data = DT.ClassificationDecisionTree.handle_data(x_data, y_data)
         # Check feature size
         # Make the number of trees determinate by self._num_trees
         for i in range(self._num_trees):
@@ -103,6 +105,7 @@ class RandomForest(object):
             # Calculate oob if necessary
             if self._oob_flag:
                 self._oob_errors.append(self.__calculate_oob_error(cdt, x_out, y_out))
+            self._trees.append(cdt)
 
     def __check_feature_size(self, x_data):
         """
@@ -134,9 +137,11 @@ class RandomForest(object):
         # Get the sample splits
         mask = np.ones(len(y), dtype=bool)
         mask[idx] = False
-        x_in = x[idx, cols]
+        x_in = x[idx, :]
+        x_in = x_in[:, cols]
         y_in = y[idx]
-        x_out = x[mask, cols]
+        x_out = x[mask, :]
+        x_out = x_out[:, cols]
         y_out = y[mask]
 
         return x_in, y_in, x_out, y_out
@@ -175,6 +180,8 @@ class RandomForest(object):
         :param x_data: The daata to predict off of
         :return: The predicted target data (y)
         """
+        # Handle data
+        x_data, _ = DT.ClassificationDecisionTree.handle_data(x_data)
         preds = []
         # Predict on each tree
         for i in range(len(self._trees)):

@@ -589,6 +589,34 @@ class TestDataIntake(unittest.TestCase):
         self.x_df_test = pd.DataFrame(x_data_test)
         self.x_matrix_test = np.asmatrix(x_data_test)
 
+    def test_handle_data(self):
+        """
+        Tests the handle data function raises appropriate value errors.
+        """
+        # Test that lists raises a value error on X and Y
+        x_list = [1, 2, 3, 4]
+        y_list = [4, 5, 6]
+
+        # True exceptions
+        x_exception = (
+            'X data input is not in correct format. X data must be 2-dimensional, and '
+            'X data can be a numpy array, matrix, pd.DataFrame.'
+        )
+        y_exception = (
+            'Y data input is not in correct format. Y data must be one-dimensional, and '
+            'Y data can be a numpy array, matrix, pd.Series.'
+        )
+
+        # Test X exception
+        with self.assertRaises(ValueError) as x_err:
+            DT.ClassificationDecisionTree.handle_data(x_list, y_list)
+        self.assertEqual(x_exception, str(x_err.exception))
+
+        # Test Y exception
+        with self.assertRaises(ValueError) as y_err:
+            DT.ClassificationDecisionTree.handle_data(self.x_matrix_train, y_list)
+        self.assertEqual(y_exception, str(y_err.exception))
+
     def test_data_intake_classification(self):
         """
         Test the classification can intake the data in different formats and predict same result.

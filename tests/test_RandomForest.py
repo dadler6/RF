@@ -61,9 +61,9 @@ class TestRandomForestFit(unittest.TestCase):
         res_3 = rf_3.get_trees()
 
         # Check number of trees
-        self.assertEquals(len(res_1), 10)
-        self.assertEquals(len(res_2), 20)
-        self.assertEquals(len(res_3), 10)
+        self.assertEqual(len(res_1), 10)
+        self.assertEqual(len(res_2), 20)
+        self.assertEqual(len(res_3), 10)
 
 
 if __name__ == "__main__":
