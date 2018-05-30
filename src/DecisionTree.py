@@ -9,6 +9,7 @@ Self-implementation of a decision tree.
 
 Package requirements:
 numpy
+pandas
 """
 
 # Imports
@@ -45,11 +46,12 @@ class _DecisionTree(object):
         fit: Takes an inputted dataset and creates the decision tree.
         predict: Takes a new dataset, and runs the algorithm to perform a prediction.
         get_tree: Returns the tree with leaf nodes (self._node_list)
+        handle_data: Handle/clean data
+
 
         Private
         -------
         Node Class: A node class (see node class for explanation)
-        __handle_data
         __recursive_fit: Fits a tree recursively by calculating a column to split on
         __create_node: Create a new node
         __split_data: Split the data between branches
@@ -58,9 +60,18 @@ class _DecisionTree(object):
         __terminate_fit: Checks at a stage whether each leaf satisfies the terminating criteria
         _recursive_predict: Does the recursive predictions at each point
         _prune_tree: Abstract method not defined until later
-
     """
     def __init__(self, tree_type, split_func, leaf_terminate, pure_terminate, prune, split_criteria):
+        """
+        Initialize all parameters
+
+        :param tree_type: classification vs. regression
+        :param split_func: the function to tabulate error
+        :param leaf_terminate: If a number, how many samples must be in a leaf to terminate
+        :param pure_terminate: True/False, saying if one should terminate in classification if all classes are equal
+        :param prune: Whether to use pessimistic pruning
+        :param split_criteria: (np.min/np.max, np.argmin/np.argmax)
+        """
         # Initialize all parameters
         self._type = tree_type
         self._split_func = split_func
@@ -82,7 +93,7 @@ class _DecisionTree(object):
         :param y_data: The result vector we are regressing on.
         """
         # Adjust the data
-        x_data, y_data = self.__handle_data(x_data, y_data)
+        x_data, y_data = self.handle_data(x_data, y_data)
 
         # Get number of columns
         self._ncols = x_data.shape[1]
@@ -98,7 +109,7 @@ class _DecisionTree(object):
             self._prune_tree([0, 0])
 
     @staticmethod
-    def __handle_data(x_data=None, y_data=None):
+    def handle_data(x_data=None, y_data=None):
         """
         Handle the x/y data to make sure they are in arrays and have no-null values.
 
@@ -325,7 +336,7 @@ class _DecisionTree(object):
         :return: A vector of predictions for each row in X.
         """
         # Clean data
-        x_data, _ = self.__handle_data(x_data)
+        x_data, _ = self.handle_data(x_data)
 
         # Iteratively go through data
         input_list = [(x_data[i, :], [0, 0]) for i in range(x_data.shape[0])]
@@ -529,6 +540,7 @@ class RegressionDecisionTree(_DecisionTree):
     def __init__(self, split_type='rss', leaf_terminate=1):
         """
         Initialize the decision tree.
+
         :param split_type: the criterion to split a node (either rss, gini, gain_ratio)
         :param leaf_terminate: the type of decision tree (classification or regression)
         """
