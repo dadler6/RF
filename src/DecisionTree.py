@@ -540,6 +540,7 @@ class RegressionDecisionTree(_DecisionTree):
     def __init__(self, split_type='rss', leaf_terminate=1):
         """
         Initialize the decision tree.
+
         :param split_type: the criterion to split a node (either rss, gini, gain_ratio)
         :param leaf_terminate: the type of decision tree (classification or regression)
         """

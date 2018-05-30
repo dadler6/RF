@@ -45,6 +45,8 @@ class RandomForest(object):
         fit: Fit the x data and y data
         get_oob_error: Get the out of bag error
         predict: Predict the values for a new dataset
+        get_trees: Get the list of decision trees
+        get_cols_used: Get the columns used for each tree
 
 
         Private
@@ -97,6 +99,8 @@ class RandomForest(object):
         # handle the data
         x_data, y_data = DT.ClassificationDecisionTree.handle_data(x_data, y_data)
         # Check feature size
+        if self._num_features is None:
+            self._num_features = x_data.shape[1]
         # Make the number of trees determinate by self._num_trees
         for i in range(self._num_trees):
             # Get tree
@@ -187,7 +191,7 @@ class RandomForest(object):
         for i in range(len(self._trees)):
             preds.append(self._trees[i].predict(x_data[:, self._cols_used[i]]))
         pred = np.column_stack(preds)
-        return np.array([Counter(pred[i, :]).most_common(1)[0] for i in range(pred.shape[0])])
+        return np.array([Counter(pred[i, :]).most_common(1)[0][0] for i in range(pred.shape[0])])
 
     def get_trees(self):
         """
@@ -196,3 +200,11 @@ class RandomForest(object):
         :return: The list of trees.
         """
         return self._trees
+
+    def get_cols_used(self):
+        """
+        Get the columns used for each tree.
+
+        :return: The columns used
+        """
+        return self._cols_used
