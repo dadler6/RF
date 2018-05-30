@@ -75,7 +75,7 @@ class RandomForest(object):
         :param split_type: The criteria to split on
         :param terminate: The termination criteria
         :param leaf_terminate: The number of samples to put into a leaf
-        :param oob: Whether to cross-validated using an out-of-bag samp.e
+        :param oob: Whether to cross-validated using an out-of-bag sample
         """
         # Set parameters
         self._samp_size = samp_size
@@ -93,8 +93,8 @@ class RandomForest(object):
         """
         Fit (train) a Random Forest model to the data.
 
-        :param x_data: The dataset to train the decision tree with.
-        :param y_data: The result vector we are regressing on.
+        :param x_data: The dataset to train the decision tree with
+        :param y_data: The result vector we are classifying (target)
         """
         # handle the data
         x_data, y_data = DT.ClassificationDecisionTree.handle_data(x_data, y_data)
@@ -181,7 +181,7 @@ class RandomForest(object):
         """
         Predict the y (target) for this x_data
 
-        :param x_data: The daata to predict off of
+        :param x_data: The data to predict off of
         :return: The predicted target data (y)
         """
         # Handle data

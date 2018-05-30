@@ -114,8 +114,8 @@ def fit(self, x_data, y_data):
     """
     Fit (train) a Random Forest model to the data.
 
-    :param x_data: The dataset to train the decision tree with.
-    :param y_data: The result vector we are regressing on.
+    :param x_data: The dataset to train the decision tree with
+    :param y_data: The result vector we are classifying (target)
     """
 
 def predict(self, x_data):
