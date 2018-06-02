@@ -5,7 +5,7 @@ This is my own implementation of a random forest, purely for learning purposes. 
 The code for the random forest implementation
 
 * [DecisionTree.py](https://github.com/dadler6/RF/blob/master/src/DecisionTree.py): Implementation of a decision tree.
-* [RandomForest.py](https://github.com/dadler6/RF/blob/master/src/RandomForest.py):: The implementation of a random forest classifier.
+* [RandomForest.py](https://github.com/dadler6/RF/blob/master/src/RandomForest.py): The implementation of a random forest classifier.
 
 **examples**
 Examples of running the various files in src.
